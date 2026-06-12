@@ -7,6 +7,7 @@
 #include "nlohmann/json.hpp"
 
 namespace mcp {
+
 struct RpcHeader {
   uint32_t body_size_;
   uint32_t sequence_id_;
@@ -24,6 +25,7 @@ class RpcBase {
  private:
   uint32_t sequence_id_;
 };
+
 class RpcRequest : public RpcBase {
  public:
   std::string GetServiceName() const { return service_name_; }
@@ -46,43 +48,33 @@ class RpcRequest : public RpcBase {
     return !service_name_.empty() && !method_name_.empty();
   }
 
-  // JSON → RpcRequest
-  static RpcRequest FromJson(const nlohmann::json& j) {
-    RpcRequest req;
-    req.SetSequenceId(j.value("id", 0));
-    req.SetServiceName(j.value("service_name", ""));
-    req.SetMethodName(j.value("method_name", ""));
-    if (j.contains("payload")) {
-      if (j["payload"].is_string()) {
-        req.SetPayload(j["payload"].get<std::string>());
-      } else {
-        req.SetPayload(j["payload"].dump());
-      }
-    }
-    return req;
-  }
+  // JSON → RpcRequest（自动识别自定义格式和 JSON-RPC 2.0 格式）
+  //
+  // 自定义格式： {"service_name":"...","method_name":"...","payload":...,"id":1}
+  // JSON-RPC 2.0：{"jsonrpc":"2.0","method":"service/method","params":...,"id":1}
+  static RpcRequest FromJson(const nlohmann::json& j);
 
  private:
   std::string service_name_;
   std::string method_name_;
   std::string payload_;
 };
+
 class RpcResponse : public RpcBase {
  public:
   std::string GetResultData() const { return result_data_; }
   void SetResultData(const std::string& result_data) {
     result_data_ = result_data;
   }
+
   bool Serializer(std::string& out) override;
   bool Deserializer(const std::string& in) override;
 
-  // RpcResponse → JSON
-  nlohmann::json ToJson() const {
-    nlohmann::json j;
-    j["id"] = GetSequenceId();
-    j["result"] = result_data_;
-    return j;
-  }
+  // RpcResponse → JSON（自定义格式）
+  nlohmann::json ToJson() const;
+
+  // RpcResponse → JSON（JSON-RPC 2.0 格式）
+  nlohmann::json ToJsonRpc() const;
 
  private:
   std::string result_data_;
@@ -114,14 +106,11 @@ class RpcError : public RpcBase {
   bool Serializer(std::string& out) override;
   bool Deserializer(const std::string& in) override;
 
-  // RpcError → JSON
-  nlohmann::json ToJson() const {
-    nlohmann::json j;
-    j["id"] = GetSequenceId();
-    j["error"]["code"] = error_code_;
-    j["error"]["message"] = error_message_;
-    return j;
-  }
+  // RpcError → JSON（自定义格式）
+  nlohmann::json ToJson() const;
+
+  // RpcError → JSON（JSON-RPC 2.0 格式）
+  nlohmann::json ToJsonRpc() const;
 
  private:
   int error_code_ = 0;

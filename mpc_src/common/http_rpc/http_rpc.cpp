@@ -1,6 +1,7 @@
 #include "http_rpc.h"
 
 #include <fstream>
+#include <sstream>
 
 #include "httplib.h"
 #include "log_manager.h"
@@ -165,9 +166,17 @@ bool HttpRpcServer::Start() {
     return fallback.ToJson();
   };
 
+  // 生成会话 ID
+  auto generate_session_id = []() -> std::string {
+    std::ostringstream oss;
+    oss << std::hex
+        << std::chrono::steady_clock::now().time_since_epoch().count();
+    return oss.str();
+  };
+
   // 注册健康检查端点：GET /health
   pimpl_->server_.Get("/health", [this](const httplib::Request& req,
-                                         httplib::Response& res) {
+                                        httplib::Response& res) {
     nlohmann::json status;
     status["status"] = "ok";
     status["host"] = host_;
@@ -179,57 +188,112 @@ bool HttpRpcServer::Start() {
     res.set_content(status.dump(), "application/json");
   });
 
-  // 注册默认 RPC 端点：POST /rpc（支持单请求和批量请求）
-  pimpl_->server_.Post("/rpc", [this, handle_one](const httplib::Request& req,
-                                                  httplib::Response& res) {
-    if (!req.has_header("Content-Type") ||
-        req.get_header_value("Content-Type").find("application/json") ==
-            std::string::npos) {
-      RpcError err;
-      err.SetErrorCode(errc::ParseError);
-      err.SetErrorMessage("Content-Type must be application/json");
-      res.status = 400;
-      res.set_content(err.ToJson().dump(), "application/json");
-      return;
-    }
-
-    try {
-      auto json = nlohmann::json::parse(req.body);
-
-      // 批量请求：body 是 JSON 数组 → 返回数组
-      if (json.is_array()) {
-        nlohmann::json batch_result = nlohmann::json::array();
-        for (const auto& item : json) {
-          try {
-            batch_result.push_back(handle_one(item));
-          } catch (const std::exception& e) {
-            RpcError err;
-            err.SetErrorCode(errc::ParseError);
-            err.SetErrorMessage(std::string("batch item error: ") + e.what());
-            batch_result.push_back(err.ToJson());
-          }
+  // ======== Streamable HTTP：POST /rpc ========
+  //
+  // 同一个端点，根据 Accept 头选择响应模式：
+  //   Accept: application/json   → 普通 JSON 响应（短连接）
+  //   Accept: text/event-stream  → SSE 流式响应（长连接，每个结果一个事件）
+  //   未指定 Accept              → 默认为 application/json
+  //
+  pimpl_->server_.Post(
+      "/rpc",
+      [this, handle_one, generate_session_id](const httplib::Request& req,
+                                              httplib::Response& res) {
+        // Content-Type 校验
+        if (!req.has_header("Content-Type") ||
+            req.get_header_value("Content-Type").find("application/json") ==
+                std::string::npos) {
+          RpcError err;
+          err.SetErrorCode(errc::ParseError);
+          err.SetErrorMessage("Content-Type must be application/json");
+          res.status = 400;
+          res.set_content(err.ToJson().dump(), "application/json");
+          return;
         }
-        res.set_content(batch_result.dump(), "application/json");
-        return;
-      }
 
-      // 单请求：body 是 JSON 对象
-      auto result = handle_one(json);
-      // 根据是否为 error 设置 HTTP 状态码
-      if (result.contains("error")) {
-        res.status = result["error"]["code"].get<int>() == errc::InternalError
-                         ? 500
-                         : 400;
-      }
-      res.set_content(result.dump(), "application/json");
-    } catch (const std::exception& e) {
-      RpcError err;
-      err.SetErrorCode(errc::ParseError);
-      err.SetErrorMessage(std::string("json parse error: ") + e.what());
-      res.status = 400;
-      res.set_content(err.ToJson().dump(), "application/json");
-    }
-  });
+        // 判断客户端期望的响应模式
+        bool wants_stream =
+            req.has_header("Accept") &&
+            req.get_header_value("Accept").find("text/event-stream") !=
+                std::string::npos;
+
+        try {
+          auto json = nlohmann::json::parse(req.body);
+
+          // 统一为数组处理
+          bool is_batch = json.is_array();
+          nlohmann::json requests =
+              is_batch ? json : nlohmann::json::array({json});
+
+          // ======== 流式模式（SSE）========
+          if (wants_stream) {
+            std::string session_id = generate_session_id();
+            res.set_header("Content-Type", "text/event-stream");
+            res.set_header("Cache-Control", "no-cache");
+            res.set_header("Connection", "keep-alive");
+            res.set_header("Mcp-Session-Id", session_id);
+
+            res.set_chunked_content_provider(
+                "text/event-stream",
+                [requests, handle_one](size_t offset,
+                                       httplib::DataSink& sink) -> bool {
+                  for (const auto& item : requests) {
+                    if (!sink.is_writable()) return false;
+                    nlohmann::json result;
+                    try {
+                      result = handle_one(item);
+                    } catch (const std::exception& e) {
+                      RpcError err;
+                      err.SetErrorCode(errc::ParseError);
+                      err.SetErrorMessage(std::string("error: ") + e.what());
+                      result = err.ToJson();
+                    }
+                    std::string frame = "data: " + result.dump() + "\n\n";
+                    if (!sink.write(frame.data(), frame.size())) {
+                      return false;
+                    }
+                  }
+                  sink.done();
+                  return true;
+                });
+            return;
+          }
+
+          // ======== 普通模式（JSON 一次性返回）========
+          if (is_batch) {
+            nlohmann::json batch_result = nlohmann::json::array();
+            for (const auto& item : requests) {
+              try {
+                batch_result.push_back(handle_one(item));
+              } catch (const std::exception& e) {
+                RpcError err;
+                err.SetErrorCode(errc::ParseError);
+                err.SetErrorMessage(std::string("batch item error: ") +
+                                    e.what());
+                batch_result.push_back(err.ToJson());
+              }
+            }
+            res.set_content(batch_result.dump(), "application/json");
+            return;
+          }
+
+          // 单请求
+          auto result = handle_one(requests[0]);
+          if (result.contains("error")) {
+            res.status =
+                result["error"]["code"].get<int>() == errc::InternalError
+                    ? 500
+                    : 400;
+          }
+          res.set_content(result.dump(), "application/json");
+        } catch (const std::exception& e) {
+          RpcError err;
+          err.SetErrorCode(errc::ParseError);
+          err.SetErrorMessage(std::string("json parse error: ") + e.what());
+          res.status = 400;
+          res.set_content(err.ToJson().dump(), "application/json");
+        }
+      });
 
   MCP_LOG_INFO("HttpRpcServer starting on {}:{}", host_, port_);
 

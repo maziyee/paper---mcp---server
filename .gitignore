@@ -1,0 +1,28 @@
+build/
+.vscode/
+*.user
+CMakeUserPresets.json
+compile_commands.json
+
+# vcpkg
+vcpkg_installed/
+vcpkg/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Papers data (runtime)
+papers/
+reports/
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

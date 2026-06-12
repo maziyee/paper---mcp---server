@@ -235,4 +235,78 @@ bool RpcError::Deserializer(const std::string& in) {
   }
 }
 
+// ==================== JSON 序列化 ====================
+
+// static
+RpcRequest RpcRequest::FromJson(const nlohmann::json& j) {
+  RpcRequest req;
+  req.SetSequenceId(j.value("id", 0));
+
+  if (j.contains("method") && !j.contains("service_name")) {
+    // === JSON-RPC 2.0 格式 ===
+    // "method": "service/method"
+    std::string full = j.value("method", "");
+    auto pos = full.find('/');
+    if (pos != std::string::npos) {
+      req.SetServiceName(full.substr(0, pos));
+      req.SetMethodName(full.substr(pos + 1));
+    } else {
+      // 没有 "/"，整个当成 service_name，method_name 留空
+      req.SetServiceName(full);
+    }
+    // "params" → payload
+    if (j.contains("params")) {
+      if (j["params"].is_string()) {
+        req.SetPayload(j["params"].get<std::string>());
+      } else {
+        req.SetPayload(j["params"].dump());
+      }
+    }
+  } else {
+    // === 自定义格式 ===
+    req.SetServiceName(j.value("service_name", ""));
+    req.SetMethodName(j.value("method_name", ""));
+    if (j.contains("payload")) {
+      if (j["payload"].is_string()) {
+        req.SetPayload(j["payload"].get<std::string>());
+      } else {
+        req.SetPayload(j["payload"].dump());
+      }
+    }
+  }
+  return req;
+}
+
+nlohmann::json RpcResponse::ToJson() const {
+  nlohmann::json j;
+  j["id"] = GetSequenceId();
+  j["result"] = result_data_;
+  return j;
+}
+
+nlohmann::json RpcResponse::ToJsonRpc() const {
+  nlohmann::json j;
+  j["jsonrpc"] = "2.0";
+  j["id"] = GetSequenceId();
+  j["result"] = result_data_;
+  return j;
+}
+
+nlohmann::json RpcError::ToJson() const {
+  nlohmann::json j;
+  j["id"] = GetSequenceId();
+  j["error"]["code"] = error_code_;
+  j["error"]["message"] = error_message_;
+  return j;
+}
+
+nlohmann::json RpcError::ToJsonRpc() const {
+  nlohmann::json j;
+  j["jsonrpc"] = "2.0";
+  j["id"] = GetSequenceId();
+  j["error"]["code"] = error_code_;
+  j["error"]["message"] = error_message_;
+  return j;
+}
+
 }  // namespace mcp

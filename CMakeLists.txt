@@ -21,6 +21,7 @@ file(GLOB_RECURSE COMMON_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/mpc_src/common/my_rpc/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/mpc_src/common/std_handle/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/mpc_src/common/http_rpc/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mpc_src/common/mcp_server/*.cpp"
     )
 
 # set (SERVER_SOURCES 
@@ -29,6 +30,10 @@ file(GLOB_RECURSE COMMON_SOURCES
 
 set (TEST_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/test_tools/test_http.cpp"
+)
+
+set (MCP_TEST_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_tools/test_mcp.cpp"
 )
 
 # set(CLIENT_SOURCES
@@ -41,13 +46,18 @@ add_executable(test
     ${TEST_SOURCES}
 )
 
+add_executable(test_mcp
+    ${COMMON_SOURCES}
+    ${MCP_TEST_SOURCES}
+)
+
 # add_executable(client
 #     ${COMMON_SOURCES}
 #     ${CLIENT_SOURCES}
 # )
 
 
-foreach(target test)
+foreach(target test test_mcp)
     target_include_directories(${target} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     )
