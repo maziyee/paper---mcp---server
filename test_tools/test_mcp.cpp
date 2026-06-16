@@ -27,19 +27,18 @@ RpcResult CallRpc(RpcManager& manager, const std::string& service,
   RpcRequest req = RpcRequest::FromJson(req_json);
   assert(req.IsValid());
 
-  // 2. 执行
-  std::string raw = manager.HandleRequest(req);
+  // 2. 执行（HandleRequest 直接返回 JSON）
+  nlohmann::json json_resp = manager.HandleRequest(req);
 
   // 3. 解析响应
-  RpcResponse resp;
-  if (resp.Deserializer(raw)) {
-    return {false, nlohmann::json::parse(resp.GetResultData())};
+  if (json_resp.contains("result")) {
+    return {false, json_resp["result"]};
   }
 
-  RpcError err;
-  if (err.Deserializer(raw)) {
+  if (json_resp.contains("error")) {
     return {true,
-            {{"code", err.GetErrorCode()}, {"message", err.GetErrorMessage()}}};
+            {{"code", json_resp["error"]["code"].get<int>()},
+             {"message", json_resp["error"]["message"].get<std::string>()}}};
   }
 
   return {true, {{"message", "failed to parse response"}}};

@@ -165,6 +165,7 @@ bool McpServer::InstallTo(RpcManager& manager) {
   MCP_LOG_INFO("Installing MCP methods (tools={}, resources={}, prompts={})...",
                tool_defs_.size(), resource_defs_.size(), prompt_defs_.size());
   if (!RegisterInitialize(manager)) return false;
+  if (!RegisterInitialized(manager)) return false;
   if (!RegisterToolsList(manager)) return false;
   if (!RegisterToolsCall(manager)) return false;
   if (!RegisterResourcesList(manager)) return false;
@@ -203,6 +204,18 @@ bool McpServer::RegisterInitialize(RpcManager& manager) {
         result["serverInfo"]["name"] = server_name_;
         result["serverInfo"]["version"] = server_version_;
         return result.dump();
+      });
+}
+
+// ======== notifications/initialized ========
+
+bool McpServer::RegisterInitialized(RpcManager& manager) {
+  return manager.RegisterMethod(
+      "mcp", "notifications/initialized",
+      [this](const std::string&) -> std::string {
+        // MCP 通知：客户端初始化完成，无需响应
+        MCP_LOG_INFO("Client initialized");
+        return "{}";
       });
 }
 

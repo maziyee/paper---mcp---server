@@ -244,16 +244,11 @@ RpcRequest RpcRequest::FromJson(const nlohmann::json& j) {
 
   if (j.contains("method") && !j.contains("service_name")) {
     // === JSON-RPC 2.0 格式 ===
-    // "method": "service/method"
+    // MCP 协议方法: "initialize", "tools/list", "tools/call" 等
+    // 统一映射：service_name="mcp", method_name=完整方法名
     std::string full = j.value("method", "");
-    auto pos = full.find('/');
-    if (pos != std::string::npos) {
-      req.SetServiceName(full.substr(0, pos));
-      req.SetMethodName(full.substr(pos + 1));
-    } else {
-      // 没有 "/"，整个当成 service_name，method_name 留空
-      req.SetServiceName(full);
-    }
+    req.SetServiceName("mcp");
+    req.SetMethodName(full);
     // "params" → payload
     if (j.contains("params")) {
       if (j["params"].is_string()) {
@@ -288,7 +283,12 @@ nlohmann::json RpcResponse::ToJsonRpc() const {
   nlohmann::json j;
   j["jsonrpc"] = "2.0";
   j["id"] = GetSequenceId();
-  j["result"] = result_data_;
+  // MCP 协议要求 result 是 JSON 对象，尝试解析
+  try {
+    j["result"] = nlohmann::json::parse(result_data_);
+  } catch (...) {
+    j["result"] = result_data_;
+  }
   return j;
 }
 

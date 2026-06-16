@@ -1,5 +1,7 @@
 #include "rpc_manager.h"
 
+#include "nlohmann/json.hpp"
+
 namespace mcp {
 
 // ======== 私有 ========
@@ -24,15 +26,13 @@ bool RpcManager::RegisterMethod(const std::string& service_name,
 
 // ======== 处理请求 ========
 
-std::string RpcManager::HandleRequest(const RpcRequest& req) {
+nlohmann::json RpcManager::HandleRequest(const RpcRequest& req) {
   if (!req.IsValid()) {
     RpcError err;
     err.SetSequenceId(req.GetSequenceId());
     err.SetErrorCode(errc::InvalidRequest);
     err.SetErrorMessage("missing service_name or method_name");
-    std::string out;
-    err.Serializer(out);
-    return out;
+    return err.ToJsonRpc();
   }
 
   std::string key = MakeKey(req.GetServiceName(), req.GetMethodName());
@@ -42,29 +42,22 @@ std::string RpcManager::HandleRequest(const RpcRequest& req) {
     err.SetSequenceId(req.GetSequenceId());
     err.SetErrorCode(errc::MethodNotFound);
     err.SetErrorMessage("method not found: " + key);
-    std::string out;
-    err.Serializer(out);
-    return out;
+    return err.ToJsonRpc();
   }
 
-  RpcResponse resp;
-  resp.SetSequenceId(req.GetSequenceId());
   try {
     std::string result = it->second(req.GetPayload());
+    RpcResponse resp;
+    resp.SetSequenceId(req.GetSequenceId());
     resp.SetResultData(std::move(result));
+    return resp.ToJsonRpc();
   } catch (const std::exception& e) {
     RpcError err;
     err.SetSequenceId(req.GetSequenceId());
     err.SetErrorCode(errc::InternalError);
     err.SetErrorMessage(std::string("handler exception: ") + e.what());
-    std::string out;
-    err.Serializer(out);
-    return out;
+    return err.ToJsonRpc();
   }
-
-  std::string out;
-  resp.Serializer(out);
-  return out;
 }
 
 }  // namespace mcp

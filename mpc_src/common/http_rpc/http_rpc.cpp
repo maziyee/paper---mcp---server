@@ -147,23 +147,7 @@ bool HttpRpcServer::Start() {
       return err.ToJson();
     }
 
-    std::string raw_resp = rpc_manager_.HandleRequest(rpc_req);
-
-    RpcResponse resp;
-    if (resp.Deserializer(raw_resp)) {
-      return resp.ToJson();
-    }
-
-    RpcError err;
-    if (err.Deserializer(raw_resp)) {
-      return err.ToJson();
-    }
-
-    RpcError fallback;
-    fallback.SetSequenceId(rpc_req.GetSequenceId());
-    fallback.SetErrorCode(errc::InternalError);
-    fallback.SetErrorMessage("failed to parse binary response");
-    return fallback.ToJson();
+    return rpc_manager_.HandleRequest(rpc_req);
   };
 
   // 生成会话 ID

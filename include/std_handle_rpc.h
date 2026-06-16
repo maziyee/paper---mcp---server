@@ -27,9 +27,9 @@ class StdRpcServer {
  private:
   // 从 in_ 读取一帧，返回原始负载
   bool ReadMessage(std::string& out_body);
-  // 向 out_ 写入 RPC 响应/错误，内部转换为 JSON
-  bool WriteMessage(const RpcResponse& resp);
-  bool WriteMessage(const RpcError& err);
+  // 向 out_ 写入 RPC 响应/错误，use_jsonrpc=true 时输出 JSON-RPC 2.0 格式
+  bool WriteMessage(const RpcResponse& resp, bool use_jsonrpc = false);
+  bool WriteMessage(const RpcError& err, bool use_jsonrpc = false);
 
   RpcManager& rpc_manager_;
   std::ostream& out_;

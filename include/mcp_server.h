@@ -63,6 +63,7 @@ class McpServer {
 
   // ======== 私有方法 ========
   bool RegisterInitialize(RpcManager& manager);
+  bool RegisterInitialized(RpcManager& manager);
   bool RegisterToolsList(RpcManager& manager);
   bool RegisterToolsCall(RpcManager& manager);
   bool RegisterResourcesList(RpcManager& manager);

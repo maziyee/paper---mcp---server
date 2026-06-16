@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "nlohmann/json_fwd.hpp"
 #include "my_rpc.h"
 
 namespace mcp {
@@ -17,8 +18,8 @@ class RpcManager {
   bool RegisterMethod(const std::string& service_name,
                       const std::string& method_name, Handler handler);
 
-  // 处理请求，返回序列化后的响应
-  std::string HandleRequest(const RpcRequest& req);
+  // 处理请求，返回 JSON 响应（直接可用，无需二进制反序列化）
+  nlohmann::json HandleRequest(const RpcRequest& req);
 
  private:
   static std::string MakeKey(const std::string& service,
