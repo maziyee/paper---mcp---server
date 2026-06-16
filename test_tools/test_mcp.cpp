@@ -201,15 +201,31 @@ int main() {
   RpcManager manager;
   McpServer mcp("test_server", "1.0");
 
+  // ======== 设置变更回调 ========
+  int change_count = 0;
+  mcp.SetChangeCallback(
+      [&](ChangeType type, const std::string& name, const nlohmann::json& def) {
+        change_count++;
+        const char* type_str = "";
+        switch (type) {
+          case ChangeType::ToolAdded: type_str = "Tool"; break;
+          case ChangeType::ResourceAdded: type_str = "Resource"; break;
+          case ChangeType::PromptAdded: type_str = "Prompt"; break;
+        }
+        std::cout << "  [callback] " << type_str << " added: " << name
+                  << " -> " << def.dump() << std::endl;
+      });
+
   // 注册 ech 工具
   {
     ToolInputSchema schema;
     schema.AddProperty("message", "string", "要回显的消息内容", true);
-    mcp.RegisterTool(
+    bool ok = mcp.RegisterTool(
         "echo", "回显输入的消息", schema,
         [](const nlohmann::json& args) -> ToolResult {
           return MakeTextResult("Echo: " + args["message"].get<std::string>());
         });
+    assert(ok);
   }
 
   // 注册 add 工具
@@ -217,12 +233,13 @@ int main() {
     ToolInputSchema schema;
     schema.AddProperty("a", "integer", "第一个加数", true);
     schema.AddProperty("b", "integer", "第二个加数", true);
-    mcp.RegisterTool("add", "返回 a + b 的结果", schema,
+    bool ok = mcp.RegisterTool("add", "返回 a + b 的结果", schema,
                      [](const nlohmann::json& args) -> ToolResult {
                        int a = args["a"].get<int>();
                        int b = args["b"].get<int>();
                        return MakeTextResult(std::to_string(a + b));
                      });
+    assert(ok);
   }
 
   // 注册 greet 工具（无参数，仅测试无 required 场景）
@@ -231,15 +248,32 @@ int main() {
     schema.AddProperty("lang", "string", "语言：zh/en", false)
         .SetDefault("zh")
         .SetEnum({"zh", "en"});
-    mcp.RegisterTool("greet", "问候", schema,
+    bool ok = mcp.RegisterTool("greet", "问候", schema,
                      [](const nlohmann::json& args) -> ToolResult {
                        std::string lang = args.value("lang", "zh");
                        if (lang == "en") return MakeTextResult("Hello!");
                        return MakeTextResult("你好！");
                      });
+    assert(ok);
   }
 
-  mcp.InstallTo(manager);
+  // 测试无效注册 — 不应触发回调
+  {
+    int before = change_count;
+    ToolInputSchema bad_schema;  // 空 schema
+    bool ok = mcp.RegisterTool("bad", "空的", bad_schema,
+                               [](const nlohmann::json&) -> ToolResult {
+                                 return MakeTextResult("");
+                               });
+    assert(!ok);
+    assert(change_count == before);  // 失败注册不触发回调
+    assert(!mcp.GetLastError().empty());
+    assert(mcp.GetLastErrorCode() == errc::kInvalidSchema);
+    std::cout << "  Reject empty schema: " << mcp.GetLastError() << std::endl;
+  }
+
+  assert(change_count == 3);  // echo + add + greet，正好 3 次
+  assert(mcp.InstallTo(manager));
 
   // ======== 运行测试 ========
 

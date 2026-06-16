@@ -1,5 +1,6 @@
 #include "mcp_server.h"
 
+#include "log_manager.h"
 #include "rpc_manager.h"
 
 namespace mcp {
@@ -8,71 +9,197 @@ namespace mcp {
 
 McpServer::McpServer(const std::string& server_name,
                      const std::string& server_version)
-    : server_name_(server_name), server_version_(server_version) {}
-
-// ======== 注册 ========
-
-void McpServer::RegisterTool(const std::string& name,
-                             const std::string& description,
-                             const ToolInputSchema& inputSchema,
-                             ToolHandler handler) {
-  tool_defs_[name] = ToolDef(name, description, inputSchema);
-  tool_handlers_[name] = std::move(handler);
+    : server_name_(server_name), server_version_(server_version) {
+  MCP_LOG_INFO("McpServer created: {} v{}", server_name_, server_version_);
 }
 
-void McpServer::RegisterResource(const std::string& uri,
-                                 const std::string& name,
-                                 const std::string& description,
-                                 const std::string& mimeType,
-                                 ResourceHandler handler) {
-  resource_defs_[uri] = ResourceDef(uri, name, description, mimeType);
-  resource_handlers_[uri] = std::move(handler);
+// ======== 错误（线程安全）========
+
+void McpServer::SetError(int code, const std::string& msg) {
+  MCP_LOG_WARN("McpServer error [{}]: {}", code, msg);
+  std::lock_guard<std::mutex> lock(error_mutex_);
+  last_error_code_ = code;
+  last_error_ = msg;
 }
 
-void McpServer::RegisterPrompt(const std::string& name,
-                               const std::string& description,
-                               const nlohmann::json& arguments,
-                               PromptHandler handler) {
-  prompt_defs_[name] = PromptDef(name, description, arguments);
-  prompt_handlers_[name] = std::move(handler);
+std::string McpServer::GetLastError() const {
+  std::lock_guard<std::mutex> lock(error_mutex_);
+  return last_error_;
 }
 
-// ======== 安装 ========
-
-void McpServer::InstallTo(RpcManager& manager) {
-  RegisterInitialize(manager);
-  RegisterToolsList(manager);
-  RegisterToolsCall(manager);
-  RegisterResourcesList(manager);
-  RegisterResourcesRead(manager);
-  RegisterPromptsList(manager);
-  RegisterPromptsGet(manager);
+int McpServer::GetLastErrorCode() const {
+  std::lock_guard<std::mutex> lock(error_mutex_);
+  return last_error_code_;
 }
-
-// ======== 错误结果 ========
 
 std::string McpServer::ErrorResult(const std::string& msg) {
   return MakeErrorResult(msg).ToResultJson().dump();
 }
 
+// ======== 变更回调 ========
+
+void McpServer::SetChangeCallback(ChangeCallback cb) {
+  std::lock_guard<std::mutex> lock(callback_mutex_);
+  change_callback_ = std::move(cb);
+}
+
+void McpServer::FireChange(ChangeType type, const std::string& name,
+                           const nlohmann::json& def) {
+  ChangeCallback cb;
+  {
+    std::lock_guard<std::mutex> lock(callback_mutex_);
+    cb = change_callback_;
+  }
+  if (cb) {
+    MCP_LOG_DEBUG("FireChange: type={} name={}", static_cast<int>(type), name);
+    cb(type, name, def);
+  }
+}
+
+// ======== 注册 ========
+
+bool McpServer::RegisterTool(const std::string& name,
+                             const std::string& description,
+                             const ToolInputSchema& inputSchema,
+                             ToolHandler handler) {
+  if (name.empty()) {
+    SetError(errc::kEmptyName, "tool name is empty");
+    return false;
+  }
+  if (!handler) {
+    SetError(errc::kHandlerEmpty, "tool handler is empty: " + name);
+    return false;
+  }
+  if (inputSchema.IsEmpty()) {
+    SetError(errc::kInvalidSchema, "tool schema is empty: " + name);
+    return false;
+  }
+  std::string err = inputSchema.Validate();
+  if (!err.empty()) {
+    SetError(errc::kInvalidSchema,
+             "tool schema invalid: " + name + " - " + err);
+    return false;
+  }
+
+  nlohmann::json def_json;
+  {
+    std::unique_lock<std::shared_mutex> lock(tools_mutex_);
+    if (tool_defs_.count(name)) {
+      SetError(errc::kDuplicateName, "tool already registered: " + name);
+      return false;
+    }
+    auto def = ToolDef(name, description, inputSchema);
+    def_json = def.ToJson();
+    tool_defs_[name] = std::move(def);
+    tool_handlers_[name] = std::move(handler);
+  }
+  MCP_LOG_INFO("Tool registered: {} ({} props)", name, inputSchema.GetProperties().size());
+  FireChange(ChangeType::ToolAdded, name, def_json);
+  return true;
+}
+
+bool McpServer::RegisterResource(const std::string& uri,
+                                 const std::string& name,
+                                 const std::string& description,
+                                 const std::string& mimeType,
+                                 ResourceHandler handler) {
+  if (uri.empty()) {
+    SetError(errc::kEmptyName, "resource uri is empty");
+    return false;
+  }
+  if (!handler) {
+    SetError(errc::kHandlerEmpty, "resource handler is empty: " + uri);
+    return false;
+  }
+
+  nlohmann::json def_json;
+  {
+    std::unique_lock<std::shared_mutex> lock(resources_mutex_);
+    if (resource_defs_.count(uri)) {
+      SetError(errc::kDuplicateName, "resource already registered: " + uri);
+      return false;
+    }
+    auto def = ResourceDef(uri, name, description, mimeType);
+    def_json = def.ToJson();
+    resource_defs_[uri] = std::move(def);
+    resource_handlers_[uri] = std::move(handler);
+  }
+  MCP_LOG_INFO("Resource registered: {} (mime={})", uri, mimeType);
+  FireChange(ChangeType::ResourceAdded, uri, def_json);
+  return true;
+}
+
+bool McpServer::RegisterPrompt(const std::string& name,
+                               const std::string& description,
+                               const nlohmann::json& arguments,
+                               PromptHandler handler) {
+  if (name.empty()) {
+    SetError(errc::kEmptyName, "prompt name is empty");
+    return false;
+  }
+  if (!handler) {
+    SetError(errc::kHandlerEmpty, "prompt handler is empty: " + name);
+    return false;
+  }
+
+  nlohmann::json def_json;
+  {
+    std::unique_lock<std::shared_mutex> lock(prompts_mutex_);
+    if (prompt_defs_.count(name)) {
+      SetError(errc::kDuplicateName, "prompt already registered: " + name);
+      return false;
+    }
+    auto def = PromptDef(name, description, arguments);
+    def_json = def.ToJson();
+    prompt_defs_[name] = std::move(def);
+    prompt_handlers_[name] = std::move(handler);
+  }
+  MCP_LOG_INFO("Prompt registered: {}", name);
+  FireChange(ChangeType::PromptAdded, name, def_json);
+  return true;
+}
+
+// ======== 安装 ========
+
+bool McpServer::InstallTo(RpcManager& manager) {
+  MCP_LOG_INFO("Installing MCP methods (tools={}, resources={}, prompts={})...",
+               tool_defs_.size(), resource_defs_.size(), prompt_defs_.size());
+  if (!RegisterInitialize(manager)) return false;
+  if (!RegisterToolsList(manager)) return false;
+  if (!RegisterToolsCall(manager)) return false;
+  if (!RegisterResourcesList(manager)) return false;
+  if (!RegisterResourcesRead(manager)) return false;
+  if (!RegisterPromptsList(manager)) return false;
+  if (!RegisterPromptsGet(manager)) return false;
+  MCP_LOG_INFO("MCP methods installed successfully");
+  return true;
+}
+
 // ======== initialize ========
 
-void McpServer::RegisterInitialize(RpcManager& manager) {
-  manager.RegisterMethod(
+bool McpServer::RegisterInitialize(RpcManager& manager) {
+  return manager.RegisterMethod(
       "mcp", "initialize",
       [this](const std::string& payload) -> std::string {
         auto params = nlohmann::json::parse(payload);
-        nlohmann::json capabilities;
-        capabilities["tools"] = nlohmann::json::object();
-        capabilities["resources"] = nlohmann::json::object();
-        capabilities["prompts"] = nlohmann::json::object();
-        if (tool_defs_.empty()) capabilities.erase("tools");
-        if (resource_defs_.empty()) capabilities.erase("resources");
-        if (prompt_defs_.empty()) capabilities.erase("prompts");
+
+        nlohmann::json caps;
+        {
+          std::shared_lock<std::shared_mutex> lock(tools_mutex_);
+          if (!tool_defs_.empty()) caps["tools"] = nlohmann::json::object();
+        }
+        {
+          std::shared_lock<std::shared_mutex> lock(resources_mutex_);
+          if (!resource_defs_.empty()) caps["resources"] = nlohmann::json::object();
+        }
+        {
+          std::shared_lock<std::shared_mutex> lock(prompts_mutex_);
+          if (!prompt_defs_.empty()) caps["prompts"] = nlohmann::json::object();
+        }
 
         nlohmann::json result;
         result["protocolVersion"] = params.value("protocolVersion", "0.0.0");
-        result["capabilities"] = capabilities;
+        result["capabilities"] = caps;
         result["serverInfo"]["name"] = server_name_;
         result["serverInfo"]["version"] = server_version_;
         return result.dump();
@@ -81,86 +208,98 @@ void McpServer::RegisterInitialize(RpcManager& manager) {
 
 // ======== tools/list ========
 
-void McpServer::RegisterToolsList(RpcManager& manager) {
-  manager.RegisterMethod(
+bool McpServer::RegisterToolsList(RpcManager& manager) {
+  return manager.RegisterMethod(
       "mcp", "tools/list",
-      [this](const std::string& /*payload*/) -> std::string {
+      [this](const std::string&) -> std::string {
         nlohmann::json tools = nlohmann::json::array();
+        std::shared_lock<std::shared_mutex> lock(tools_mutex_);
         for (const auto& [name, def] : tool_defs_) {
           tools.push_back(def.ToJson());
         }
-        nlohmann::json result;
-        result["tools"] = tools;
-        return result.dump();
+        return nlohmann::json({{"tools", tools}}).dump();
       });
 }
 
 // ======== tools/call ========
 
-void McpServer::RegisterToolsCall(RpcManager& manager) {
-  manager.RegisterMethod(
+bool McpServer::RegisterToolsCall(RpcManager& manager) {
+  return manager.RegisterMethod(
       "mcp", "tools/call",
       [this](const std::string& payload) -> std::string {
         auto params = nlohmann::json::parse(payload);
         std::string name = params.value("name", "");
-        nlohmann::json args = params.contains("arguments")
-                                  ? params["arguments"]
-                                  : nlohmann::json::object();
 
-        auto it = tool_handlers_.find(name);
-        if (it == tool_handlers_.end()) {
-          return MakeErrorResult("tool not found: " + name)
-              .ToResultJson()
-              .dump();
+        ToolHandler handler;
+        {
+          std::shared_lock<std::shared_mutex> lock(tools_mutex_);
+          auto it = tool_handlers_.find(name);
+          if (it == tool_handlers_.end()) {
+            MCP_LOG_WARN("tools/call: not found: {}", name);
+            return ErrorResult("tool not found: " + name);
+          }
+          handler = it->second;
         }
+        // 解锁后执行，不阻塞其他请求
 
+        MCP_LOG_DEBUG("tools/call: {}", name);
         try {
-          ToolResult tool_result = it->second(args);
-          return tool_result.ToResultJson().dump();
+          nlohmann::json args = params.contains("arguments")
+                                    ? params["arguments"]
+                                    : nlohmann::json::object();
+          return handler(args).ToResultJson().dump();
         } catch (const std::exception& e) {
-          return MakeErrorResult(e.what()).ToResultJson().dump();
+          MCP_LOG_ERROR("tools/call exception: {} - {}", name, e.what());
+          return ErrorResult(e.what());
         }
       });
 }
 
 // ======== resources/list ========
 
-void McpServer::RegisterResourcesList(RpcManager& manager) {
-  manager.RegisterMethod(
+bool McpServer::RegisterResourcesList(RpcManager& manager) {
+  return manager.RegisterMethod(
       "mcp", "resources/list",
-      [this](const std::string& /*payload*/) -> std::string {
+      [this](const std::string&) -> std::string {
         nlohmann::json resources = nlohmann::json::array();
+        std::shared_lock<std::shared_mutex> lock(resources_mutex_);
         for (const auto& [uri, def] : resource_defs_) {
           resources.push_back(def.ToJson());
         }
-        nlohmann::json result;
-        result["resources"] = resources;
-        return result.dump();
+        return nlohmann::json({{"resources", resources}}).dump();
       });
 }
 
 // ======== resources/read ========
 
-void McpServer::RegisterResourcesRead(RpcManager& manager) {
-  manager.RegisterMethod(
+bool McpServer::RegisterResourcesRead(RpcManager& manager) {
+  return manager.RegisterMethod(
       "mcp", "resources/read",
       [this](const std::string& payload) -> std::string {
         auto params = nlohmann::json::parse(payload);
         std::string uri = params.value("uri", "");
 
-        auto def_it = resource_defs_.find(uri);
-        if (def_it == resource_defs_.end()) {
-          return ErrorResult("resource not found: " + uri);
+        ResourceHandler handler;
+        std::string mime_type;
+        {
+          std::shared_lock<std::shared_mutex> lock(resources_mutex_);
+          auto def_it = resource_defs_.find(uri);
+          if (def_it == resource_defs_.end()) {
+            MCP_LOG_WARN("resources/read: not found: {}", uri);
+            return ErrorResult("resource not found: " + uri);
+          }
+          auto hdl_it = resource_handlers_.find(uri);
+          if (hdl_it == resource_handlers_.end()) {
+            MCP_LOG_WARN("resources/read: handler not found: {}", uri);
+            return ErrorResult("resource handler not found: " + uri);
+          }
+          mime_type = def_it->second.GetMimeType();
+          handler = hdl_it->second;
         }
 
-        auto hdl_it = resource_handlers_.find(uri);
-        if (hdl_it == resource_handlers_.end()) {
-          return ErrorResult("resource handler not found: " + uri);
-        }
-
+        MCP_LOG_DEBUG("resources/read: {} (mime={})", uri, mime_type);
         try {
-          ResourceResult data = hdl_it->second();
-
+          ResourceResult data = handler();
           nlohmann::json content_item;
           content_item["uri"] = uri;
           content_item["mimeType"] = data.GetMimeType();
@@ -169,11 +308,10 @@ void McpServer::RegisterResourcesRead(RpcManager& manager) {
           } else {
             content_item["text"] = data.GetContent();
           }
-
-          nlohmann::json result;
-          result["contents"] = nlohmann::json::array({content_item});
-          return result.dump();
+          return nlohmann::json({{"contents", nlohmann::json::array({content_item})}})
+              .dump();
         } catch (const std::exception& e) {
+          MCP_LOG_ERROR("resources/read exception: {} - {}", uri, e.what());
           return ErrorResult(e.what());
         }
       });
@@ -181,43 +319,49 @@ void McpServer::RegisterResourcesRead(RpcManager& manager) {
 
 // ======== prompts/list ========
 
-void McpServer::RegisterPromptsList(RpcManager& manager) {
-  manager.RegisterMethod(
+bool McpServer::RegisterPromptsList(RpcManager& manager) {
+  return manager.RegisterMethod(
       "mcp", "prompts/list",
-      [this](const std::string& /*payload*/) -> std::string {
+      [this](const std::string&) -> std::string {
         nlohmann::json prompts = nlohmann::json::array();
+        std::shared_lock<std::shared_mutex> lock(prompts_mutex_);
         for (const auto& [name, def] : prompt_defs_) {
           prompts.push_back(def.ToJson());
         }
-        nlohmann::json result;
-        result["prompts"] = prompts;
-        return result.dump();
+        return nlohmann::json({{"prompts", prompts}}).dump();
       });
 }
 
 // ======== prompts/get ========
 
-void McpServer::RegisterPromptsGet(RpcManager& manager) {
-  manager.RegisterMethod(
+bool McpServer::RegisterPromptsGet(RpcManager& manager) {
+  return manager.RegisterMethod(
       "mcp", "prompts/get",
       [this](const std::string& payload) -> std::string {
         auto params = nlohmann::json::parse(payload);
         std::string name = params.value("name", "");
-        nlohmann::json args = params.contains("arguments")
-                                  ? params["arguments"]
-                                  : nlohmann::json::object();
 
-        auto hdl_it = prompt_handlers_.find(name);
-        if (hdl_it == prompt_handlers_.end()) {
-          return ErrorResult("prompt not found: " + name);
+        PromptHandler handler;
+        {
+          std::shared_lock<std::shared_mutex> lock(prompts_mutex_);
+          auto it = prompt_handlers_.find(name);
+          if (it == prompt_handlers_.end()) {
+            MCP_LOG_WARN("prompts/get: not found: {}", name);
+            return ErrorResult("prompt not found: " + name);
+          }
+          handler = it->second;
         }
 
+        MCP_LOG_DEBUG("prompts/get: {}", name);
         try {
-          auto messages = hdl_it->second(args);
+          nlohmann::json args = params.contains("arguments")
+                                    ? params["arguments"]
+                                    : nlohmann::json::object();
           nlohmann::json result;
-          result["messages"] = messages;
+          result["messages"] = handler(args);
           return result.dump();
         } catch (const std::exception& e) {
+          MCP_LOG_ERROR("prompts/get exception: {} - {}", name, e.what());
           return ErrorResult(e.what());
         }
       });

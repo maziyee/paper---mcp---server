@@ -178,6 +178,19 @@ using ResourceHandler = std::function<ResourceResult()>;
 // 提示 handler：JSON 参数 → messages 数组
 using PromptHandler = std::function<nlohmann::json(const nlohmann::json& args)>;
 
+// ======== 注册变更回调 ========
+
+// 变更类型
+enum class ChangeType { ToolAdded, ResourceAdded, PromptAdded };
+
+// 回调：McpServer 注册新工具/资源/提示时触发
+// type:  变更类型
+// name:  工具名 / 资源 URI / 提示名
+// def:   对应的定义 JSON（ToolDef::ToJson / ResourceDef::ToJson / PromptDef::ToJson）
+using ChangeCallback =
+    std::function<void(ChangeType type, const std::string& name,
+                       const nlohmann::json& def)>;
+
 // ======== 工具输入参数 Schema ========
 
 // 描述一个 MCP 工具的输入参数格式（JSON Schema object 类型）
@@ -220,10 +233,15 @@ class ToolInputSchema {
   nlohmann::json ToJson() const;
   static ToolInputSchema FromJson(const nlohmann::json& j);
 
+  // 校验 schema 是否有效，返回错误信息（空串表示有效）
+  // 检查项：type 为 object、至少一个属性、required 中的属性必须存在
+  std::string Validate() const;
+
   // 访问器
   const std::string& GetType() const { return type_; }
   const nlohmann::json& GetProperties() const { return properties_; }
   const std::vector<std::string>& GetRequired() const { return required_; }
+  bool IsEmpty() const { return properties_.empty(); }
 
  private:
   std::string type_ = "object";

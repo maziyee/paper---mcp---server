@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "paper-mcp": {
+      "command": "D:/projects/mcp_mt/build/Release/server.exe",
+      "args": ["--no-http"],
+      "env": {}
+    },
+    "paper-mcp-remote": {
+      "command": "curl",
+      "args": ["-X", "POST", "http://localhost:8080/rpc"]
+    }
+  }
+}

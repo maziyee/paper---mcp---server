@@ -1,93 +1,128 @@
-# MCP_MT
+# Paper MCP Server
 
+基于 C++ 的 MCP（Model Context Protocol）论文数据处理服务端，提供论文数据提取、最新数据搜索、数据更新等功能。
 
-
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+## 架构
 
 ```
-cd existing_repo
-git remote add origin http://git.cpptrain.top/MT/mcp_mt.git
-git branch -M main
-git push -uf origin main
+Claude Desktop / MCP 客户端
+    │
+    │  stdin/stdout 或 HTTP
+    ▼
+┌─────────────────────────────┐
+│  McpServer (协议层)          │
+│  ├─ tools/list              │  ← 自动发现工具
+│  ├─ tools/call              │  ← 执行工具
+│  ├─ resources/list          │  ← 列出资源
+│  └─ resources/read          │  ← 读取资源
+├─────────────────────────────┤
+│  RpcManager (路由层)         │
+├─────────────────────────────┤
+│  HttpRpcServer / StdRpcServer│  ← 双传输
+└─────────────────────────────┘
+    │
+    ▼
+  Python 脚本 → 论文处理
 ```
 
-## Integrate with your tools
+## 已有工具
 
-- [ ] [Set up project integrations](http://git.cpptrain.top/MT/mcp_mt/-/settings/integrations)
+| 工具 | 功能 |
+|------|------|
+| `extract_data_points` | 从论文 TXT 提取时序数据点（数字+单位+位置） |
+| `search_latest_data` | 对单个数据点搜索全网最新值 |
+| `update_paper_data` | 将最新数据写入论文元数据 |
 
-## Collaborate with your team
+## 快速开始
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+### Linux / WSL
 
-## Test and Deploy
+```bash
+# 1. 克隆
+git clone http://git.cpptrain.top/MT/mcp_mt.git
+cd mcp_mt
 
-Use the built-in continuous integration in GitLab.
+# 2. 安装依赖 + 编译
+bash setup_linux.sh
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+# 3. 测试
+./build/test_mcp
 
-***
+# 4. 启动服务
+./build/server --no-http
+```
 
-# Editing this README
+### Windows
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+```powershell
+git clone http://git.cpptrain.top/MT/mcp_mt.git
+cd mcp_mt
+setup_windows.bat
+```
 
-## Suggestions for a good README
+## 前置依赖
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+| 依赖 | 用途 |
+|------|------|
+| CMake >= 3.10 | 构建系统 |
+| C++17 编译器 (GCC/MSVC) | 编译 |
+| vcpkg | C++ 包管理 |
+| Python 3 | 工具脚本 |
+| spdlog, nlohmann-json, httplib | 通过 vcpkg 安装 |
 
-## Name
-Choose a self-explaining name for your project.
+## 配置 Claude Desktop
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+编辑 Claude Desktop 的 `claude_desktop_config.json`：
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+```json
+{
+  "mcpServers": {
+    "paper-mcp": {
+      "command": "/path/to/mcp_mt/build/server",
+      "args": ["--no-http"]
+    }
+  }
+}
+```
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+重启 Claude Desktop，然后对话：
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+> 帮我分析 papers/test_001.txt 这篇论文，提取所有数据点
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## 项目结构
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+```
+mcp_mt/
+├── include/           # 头文件
+│   ├── mcp_types.h    # 类型定义（ContentItem, ToolResult, ToolInputSchema）
+│   ├── mcp_server.h   # MCP 协议层
+│   ├── rpc_manager.h  # RPC 路由
+│   ├── my_rpc.h       # RPC 基类
+│   ├── http_rpc.h     # HTTP 传输
+│   └── std_handle_rpc.h # stdio 传输
+├── mpc_src/
+│   ├── common/        # 公共实现
+│   └── server/        # 服务端入口
+├── tools/
+│   ├── paper_tools.cpp # 工具注册
+│   └── scripts/       # Python 脚本
+├── test_tools/        # 测试
+├── config/            # 配置文件
+└── papers/            # 论文数据
+```
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+## 命令行参数
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+```bash
+./build/server [选项]
+  --config <path>     服务器配置文件 (默认 config/server_config.json)
+  --log-config <path> 日志配置文件 (默认 config/log_config.json)
+  --host <ip>         HTTP 监听地址 (默认 0.0.0.0)
+  --port <port>       HTTP 监听端口 (默认 8080)
+  --no-http           禁用 HTTP 传输
+  --no-stdio          禁用 stdio 传输
+```
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+MIT

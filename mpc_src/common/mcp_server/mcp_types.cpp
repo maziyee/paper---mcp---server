@@ -118,6 +118,36 @@ ToolInputSchema ToolInputSchema::FromJson(const nlohmann::json& j) {
   return schema;
 }
 
+std::string ToolInputSchema::Validate() const {
+  if (type_ != "object") return "type must be 'object', got: " + type_;
+  if (properties_.empty()) return "properties is empty";
+  if (!properties_.is_object()) return "properties must be an object";
+
+  // 检查 required 中的每个属性都在 properties 中
+  for (const auto& name : required_) {
+    if (!properties_.contains(name)) {
+      return "required property '" + name + "' not found in properties";
+    }
+  }
+
+  // 检查每个属性的 type 是合法的 JSON Schema 类型
+  static const std::vector<std::string> kValidTypes = {
+      "string", "integer", "number", "boolean", "array", "object"};
+  for (auto it = properties_.begin(); it != properties_.end(); ++it) {
+    const auto& prop = it.value();
+    if (!prop.contains("type")) {
+      return "property '" + it.key() + "' missing 'type'";
+    }
+    std::string t = prop["type"].get<std::string>();
+    if (std::find(kValidTypes.begin(), kValidTypes.end(), t) ==
+        kValidTypes.end()) {
+      return "property '" + it.key() + "' has invalid type: " + t;
+    }
+  }
+
+  return "";  // 空串 = 有效
+}
+
 // ======== ToolDef ========
 
 nlohmann::json ToolDef::ToJson() const {

@@ -1,0 +1,18 @@
+[2026-06-16 14:47:09.549] [info] [13100] Server paper-mcp v1.0.0 starting (http=true, stdio=false)
+[2026-06-16 14:47:09.549] [info] [13100] McpServer created: paper-mcp v1.0.0
+[2026-06-16 14:47:09.549] [info] [13100] Tool registered: extract_data_points (1 props)
+[2026-06-16 14:47:09.549] [info] [13100] [Tool] extract_data_points registered
+[2026-06-16 14:47:09.549] [info] [13100] Tool registered: search_latest_data (4 props)
+[2026-06-16 14:47:09.549] [info] [13100] [Tool] search_latest_data registered
+[2026-06-16 14:47:09.549] [info] [13100] Tool registered: update_paper_data (2 props)
+[2026-06-16 14:47:09.549] [info] [13100] [Tool] update_paper_data registered
+[2026-06-16 14:47:09.549] [info] [13100] Installing MCP methods (tools=3, resources=0, prompts=0)...
+[2026-06-16 14:47:09.549] [info] [13100] MCP methods installed successfully
+[2026-06-16 14:47:09.549] [info] [13102] HTTP transport started on 0.0.0.0:9999
+[2026-06-16 14:47:09.549] [info] [13102] HttpRpcServer starting on 0.0.0.0:9999
+[2026-06-16 14:47:10.557] [info] [13103] HTTP POST /rpc -> 200
+[2026-06-16 14:47:10.577] [info] [13104] HTTP POST /rpc -> 200
+[2026-06-16 14:47:10.597] [info] [13105] extract_data_points: paper_id=test_001
+[2026-06-16 14:47:10.628] [info] [13105] HTTP POST /rpc -> 200
+[2026-06-16 14:47:10.636] [info] [13102] HTTP transport stopped
+[2026-06-16 14:47:10.636] [info] [13100] Server exited

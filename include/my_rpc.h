@@ -81,7 +81,7 @@ class RpcResponse : public RpcBase {
 };
 
 namespace errc {
-// 协议解析错误
+// JSON-RPC 标准错误（-32700 ~ -32600）
 constexpr int ParseError = -32700;        // 数据包解析失败
 constexpr int InvalidRequest = -32600;    // 请求格式无效
 constexpr int ServiceNotFound = -32601;   // 服务不存在
@@ -91,6 +91,14 @@ constexpr int InternalError = -32604;     // 内部错误
 
 // -32000 ~ -32099 预留给业务自定义错误
 constexpr int BusinessError = -32000;
+
+// McpServer 注册错误（-32100 ~ -32199）
+constexpr int kInvalidSchema = -32100;     // ToolInputSchema 校验失败
+constexpr int kEmptyName = -32101;         // 名称为空
+constexpr int kDuplicateName = -32102;     // 名称重复
+constexpr int kHandlerEmpty = -32103;      // handler 为空
+constexpr int kRegisterFailed = -32104;    // 注册到 RpcManager 失败
+constexpr int kInstallIncomplete = -32105; // 未完全安装
 }  // namespace errc
 
 class RpcError : public RpcBase {

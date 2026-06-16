@@ -1,6 +1,6 @@
 {
-    "save_file": "/home/you_dian/MCP/mcp_mt/logs",
-    "level": "trace",
+    "save_file": "logs",
+    "level": "info",
     "is_stdout": true,
     "is_fileout": true
 }

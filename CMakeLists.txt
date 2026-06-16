@@ -24,9 +24,10 @@ file(GLOB_RECURSE COMMON_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/mpc_src/common/mcp_server/*.cpp"
     )
 
-# set (SERVER_SOURCES 
-#     "${CMAKE_CURRENT_SOURCE_DIR}/rpc_src/server/server_main.cpp"
-# )
+set (SERVER_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/mpc_src/server/server_main.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/paper_tools.cpp"
+)
 
 set (TEST_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/test_tools/test_http.cpp"
@@ -51,15 +52,21 @@ add_executable(test_mcp
     ${MCP_TEST_SOURCES}
 )
 
+add_executable(server
+    ${COMMON_SOURCES}
+    ${SERVER_SOURCES}
+)
+
 # add_executable(client
 #     ${COMMON_SOURCES}
 #     ${CLIENT_SOURCES}
 # )
 
 
-foreach(target test test_mcp)
+foreach(target test test_mcp server)
     target_include_directories(${target} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/tools
     )
     target_link_libraries(${target} PRIVATE
         spdlog::spdlog
