@@ -1,8 +1,11 @@
+#include <algorithm>
 #include <atomic>
 #include <csignal>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <thread>
 
 #include "http_rpc.h"
@@ -89,9 +92,18 @@ void SignalHandler(int sig) {
 }  // namespace
 
 int main(int argc, char* argv[]) {
+  // ======== 计算服务器基础目录（相对于可执行文件位置）========
+
+  std::filesystem::path exe_path =
+      std::filesystem::absolute(argv[0]).parent_path();
+  // 开发环境：build/ 目录，配置在上层
+  // 安装环境：bin/ 目录，配置在 /etc 或上层
+  std::filesystem::path base_dir = exe_path.parent_path();  // mcp_mt/
+
   // ======== 加载配置 ========
 
-  ServerConfig cfg = LoadConfig("config/server_config.json");
+  std::string config_path = (base_dir / "config/server_config.json").string();
+  ServerConfig cfg = LoadConfig(config_path);
   ApplyArgs(cfg, argc, argv);
 
   if (!cfg.http_enabled && !cfg.stdio_enabled) {
@@ -101,13 +113,64 @@ int main(int argc, char* argv[]) {
 
   // ======== 初始化日志 ========
 
+  std::string log_config_path = (base_dir / cfg.log_config_path).string();
   mcp::SpdlogConfig log_config;
-  if (!log_config.InitSpdlog(cfg.log_config_path)) {
+
+  // 先加载日志配置文件
+  if (!log_config.InitSpdlog(log_config_path)) {
+    // 配置文件不存在，使用默认配置
     log_config.SetLevel("info");
     log_config.Setstdout(true);
     log_config.SetFileout(false);
   }
+
+  // stdio 模式下 stdout 被 MCP 占用，日志绝对不能写 stdout
+  if (cfg.stdio_enabled) {
+    log_config.Setstdout(false);
+    if (!log_config.GetIsFileout()) {
+      log_config.SetFileout(true);
+    }
+  }
+
+  // 日志文件路径使用绝对路径
+  std::filesystem::path log_dir = base_dir / "logs";
+  log_config.SetLogPath(log_dir.string());
+
+  // 确保日志目录存在
+  std::error_code ec;
+  if (!std::filesystem::exists(log_dir)) {
+    std::filesystem::create_directories(log_dir, ec);
+    if (ec) {
+      std::cerr << "Warning: cannot create log dir " << log_dir
+                << ": " << ec.message() << "\n";
+      // 回退到 /tmp
+      log_dir = "/tmp/mcp_logs";
+      std::filesystem::create_directories(log_dir, ec);
+      log_config.SetLogPath(log_dir.string());
+    }
+  }
+
   mcp::Logger::GetInstance().Init(&log_config);
+
+  // 双重保险：stdio 模式下强制确保不向 stdout 输出日志
+  if (cfg.stdio_enabled) {
+    auto logger = spdlog::get("rpc");
+    if (logger) {
+      auto& sinks = logger->sinks();
+      sinks.erase(
+          std::remove_if(sinks.begin(), sinks.end(),
+                         [](const spdlog::sink_ptr& s) {
+                           return std::dynamic_pointer_cast<
+                                      spdlog::sinks::stdout_color_sink_mt>(s) !=
+                                  nullptr;
+                         }),
+          sinks.end());
+      // 如果所有 sink 都被移除了，关闭日志输出
+      if (sinks.empty()) {
+        logger->set_level(spdlog::level::off);
+      }
+    }
+  }
 
   MCP_LOG_INFO("Server {} v{} starting (http={}, stdio={})",
                cfg.server_name, cfg.server_version,
@@ -143,25 +206,24 @@ int main(int argc, char* argv[]) {
   std::signal(SIGINT, SignalHandler);
   std::signal(SIGTERM, SignalHandler);
 
-  // ======== 提示信息 ========
+  // ======== 提示信息（stderr，不污染 stdout MCP 通道）========
 
-  std::cout << "========================================\n";
-  std::cout << " " << cfg.server_name << " v" << cfg.server_version << "\n";
-  std::cout << "----------------------------------------\n";
-  if (cfg.stdio_enabled) std::cout << " stdio:  stdin/stdout (Content-Length)\n";
+  std::cerr << "========================================\n";
+  std::cerr << " " << cfg.server_name << " v" << cfg.server_version << "\n";
+  std::cerr << "----------------------------------------\n";
+  if (cfg.stdio_enabled) std::cerr << " stdio:  stdin/stdout (Content-Length)\n";
   if (cfg.http_enabled)
-    std::cout << " http:   http://" << cfg.http_host << ":" << cfg.http_port << "\n";
-  std::cout << "----------------------------------------\n";
-  std::cout << " Ctrl+C to stop\n";
-  std::cout << "========================================\n";
-  std::cout.flush();
+    std::cerr << " http:   http://" << cfg.http_host << ":" << cfg.http_port << "\n";
+  std::cerr << "----------------------------------------\n";
+  std::cerr << " Ctrl+C to stop\n";
+  std::cerr << "========================================\n";
+  std::cerr.flush();
 
   // ======== 启动 HTTP（后台线程）========
 
   std::thread http_thread;
   if (cfg.http_enabled) {
     http_thread = std::thread([&manager, &cfg]() {
-      MCP_LOG_INFO("HTTP transport started on {}:{}", cfg.http_host, cfg.http_port);
       mcp::HttpRpcServer http_server(cfg.http_host, cfg.http_port, manager);
       g_http_server = &http_server;
       http_server.Start();
@@ -172,9 +234,9 @@ int main(int argc, char* argv[]) {
   // ======== 主线程运行 stdio ========
 
   if (cfg.stdio_enabled) {
-    MCP_LOG_INFO("Stdio transport started");
+    MCP_LOG_INFO("Stdio transport started (stdio)");
     mcp::StdRpcServer stdio_server(manager, std::cout, std::cin);
-    stdio_server.Run();  // 阻塞直到 stdin EOF
+    stdio_server.Run();
     MCP_LOG_INFO("Stdio transport stopped");
   }
 

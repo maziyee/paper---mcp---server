@@ -70,6 +70,61 @@ setup_windows.bat
 | Python 3 | 工具脚本 |
 | spdlog, nlohmann-json, httplib | 通过 vcpkg 安装 |
 
+## 配置 Claude Code（VSCode 扩展）
+
+在项目根目录创建 `.mcp.json`：
+
+```json
+{
+  "mcpServers": {
+    "paper-mcp": {
+      "type": "stdio",
+      "command": "/home/you_dian/.local/bin/mcp-node",
+      "args": ["/home/you_dian/MCP/mcp_mt/scripts/mcp_bridge.js"],
+      "cwd": "/home/you_dian/MCP/mcp_mt"
+    }
+  }
+}
+```
+
+> **WSL 用户注意**：VSCode 扩展宿主机的 PATH 不包含 nvm 安装的 Node.js，会导致 `spawn ENOENT`。需要用 VSCode 自带的 Node.js 启动。`mcp-node` 脚本会自动发现 VSCode 的 Node.js 路径。
+
+### 所需文件
+
+| 文件 | 作用 |
+|------|------|
+| `.mcp.json` | MCP 服务器配置（放项目根目录） |
+| `mcp_bridge.js` | Node.js 中继，启动 C++ server 并桥接管道 |
+| `mcp-node` | 自动发现 VSCode Node.js 的 wrapper 脚本 |
+
+### Bridge 架构（WSL 专用）
+
+```
+Claude Code (VSCode 扩展)
+    │  spawn mcp-node → 自动找到 VSCode Node.js
+    ▼
+mcp_bridge.js (Node.js 中继)
+    │  spawn server --no-http
+    ▼
+paper-mcp C++ Server (stdio 模式)
+    │
+    ▼
+Python 脚本 → 论文处理
+```
+
+VSCode 扩展的 MCP Gateway 在 WSL 下 spawn 进程时 PATH 不完整，直接用 C++ 二进制或系统 Python 都会报 `ENOENT`。通过 `mcp-node`（指向 VSCode 自带的 Node.js）可以绕过此限制。
+
+### 传输协议兼容
+
+C++ 服务器支持两种 MCP 传输格式：
+
+| 格式 | 请求 | 响应 | 使用者 |
+|------|------|------|--------|
+| Content-Length 帧 | `Content-Length: N\r\n\r\n{json}` | 同格式 | 标准 MCP 客户端、Ollama |
+| 原始 JSON 行 | `{"method":"...",...}\n` | 同格式 | Claude Code VSCode 扩展 |
+
+服务器自动检测请求格式并用相同格式回复。
+
 ## 配置 Claude Desktop
 
 编辑 Claude Desktop 的 `claude_desktop_config.json`：
@@ -88,6 +143,26 @@ setup_windows.bat
 重启 Claude Desktop，然后对话：
 
 > 帮我分析 papers/test_001.txt 这篇论文，提取所有数据点
+
+## 用 Ollama 本地模型测试
+
+```bash
+# 1. 启动 Ollama
+ollama serve
+
+# 2. 运行 demo（使用 qwen2.5:7b）
+python3 scripts/ollama_mcp_demo.py
+```
+
+交互示例：
+```
+👤 你: 论文 test_001 中有哪些时序数据？
+🤖 AI 思考中... (6.3s)
+🔧 调用工具: extract_data_points
+   参数: {"paper_id": "test_001"}
+   ✅ 提取 34 个数据点
+💬 回复: 2023年集成电路产量4200亿片，2024年4510亿片...
+```
 
 ## 项目结构
 
