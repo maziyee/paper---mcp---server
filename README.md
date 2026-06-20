@@ -72,6 +72,74 @@ cd mcp_mt
 setup_windows.bat
 ```
 
+## 部署到 Claude
+
+### Claude Desktop（Windows）
+
+编译完成后，编辑 Claude Desktop 配置文件（`%APPDATA%\Claude\claude_desktop_config.json`）：
+
+```json
+{
+  "mcpServers": {
+    "paper-mcp": {
+      "command": "D:/projects/mcp_mt/build/Release/server.exe",
+      "args": ["--no-http"],
+      "env": {
+        "VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "VISION_MODEL": "qwen3.7-plus",
+        "VISION_API_KEY": "<your-api-key>"
+      }
+    }
+  }
+}
+```
+
+重启 Claude Desktop 即可使用。
+
+### Claude Desktop（macOS / Linux）
+
+编辑 `~/Library/Application Support/Claude/claude_desktop_config.json`：
+
+```json
+{
+  "mcpServers": {
+    "paper-mcp": {
+      "command": "/path/to/mcp_mt/build/server",
+      "args": ["--no-http"],
+      "env": {
+        "VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "VISION_MODEL": "qwen3.7-plus",
+        "VISION_API_KEY": "<your-api-key>"
+      }
+    }
+  }
+}
+```
+
+### Claude Code VSCode 扩展（Windows 原生）
+
+Windows 下 VSCode 的 PATH 环境是完整的，可直接使用 Node.js：
+
+```json
+{
+  "mcpServers": {
+    "paper-mcp": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["D:/projects/mcp_mt/scripts/mcp_bridge.js"],
+      "cwd": "D:/projects/mcp_mt",
+      "env": {
+        "VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "VISION_MODEL": "qwen3.7-plus",
+        "VISION_API_KEY": "<your-api-key>"
+      }
+    }
+  }
+}
+```
+
+> **Windows vs WSL 区别**：Windows 原生环境不需要 `mcp-node` 桥接脚本，可直接用 `node` 调用 `mcp_bridge.js`。`mcp-node` 仅为解决 WSL 下 PATH 不完整的问题。
+
 ## 前置依赖
 
 | 依赖 | 用途 |
@@ -82,7 +150,7 @@ setup_windows.bat
 | Python 3 | 工具脚本 |
 | spdlog, nlohmann-json, httplib | 通过 vcpkg 安装 |
 
-## 配置 Claude Code（VSCode 扩展）
+## 配置 Claude Code（VSCode 扩展 / WSL）
 
 在项目根目录创建 `.mcp.json`：
 
@@ -142,25 +210,6 @@ C++ 服务器支持两种 MCP 传输格式：
 | 原始 JSON 行 | `{"method":"...",...}\n` | 同格式 | Claude Code VSCode 扩展 |
 
 服务器自动检测请求格式并用相同格式回复。
-
-## 配置 Claude Desktop
-
-编辑 Claude Desktop 的 `claude_desktop_config.json`：
-
-```json
-{
-  "mcpServers": {
-    "paper-mcp": {
-      "command": "/path/to/mcp_mt/build/server",
-      "args": ["--no-http"]
-    }
-  }
-}
-```
-
-重启 Claude Desktop，然后对话：
-
-> 帮我分析 papers/test_001.txt 这篇论文，提取所有数据点
 
 ## 用 Ollama 本地模型测试
 
