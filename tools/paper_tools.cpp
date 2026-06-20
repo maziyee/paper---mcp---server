@@ -48,7 +48,7 @@ void RegisterPaperTools(McpServer& mcp) {
         schema,
         [](const nlohmann::json& args) -> ToolResult {
           std::string paper_id = args["paper_id"];
-          std::string cmd = "python3 tools/scripts/extract_data_points.py "
+          std::string cmd = "python tools/scripts/extract_data_points.py "
                           + Quote("papers/" + paper_id + ".txt");
           MCP_LOG_INFO("extract_data_points: paper_id={}", paper_id);
           std::string out = Exec(cmd);
@@ -80,7 +80,7 @@ void RegisterPaperTools(McpServer& mcp) {
           input["context"] = context;
 
           std::string cmd =
-              "python3 tools/scripts/search_latest_data.py " + Quote(input.dump());
+              "python tools/scripts/search_latest_data.py " + Quote(input.dump());
           MCP_LOG_INFO("search_latest_data: metric={}", metric);
           std::string out = Exec(cmd);
           return MakeTextResult(out);
@@ -115,7 +115,7 @@ void RegisterPaperTools(McpServer& mcp) {
           std::string paper_id = args["paper_id"];
           std::string updates_str = args["updates"].dump();
 
-          std::string cmd = "python3 tools/scripts/update_paper_data.py "
+          std::string cmd = "python tools/scripts/update_paper_data.py "
                           + Quote(paper_id) + " " + Quote(updates_str);
           MCP_LOG_INFO("update_paper_data: paper_id={}, updates={} items",
                        paper_id, args["updates"].size());

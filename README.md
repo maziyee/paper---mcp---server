@@ -47,43 +47,169 @@ Claude Desktop / MCP 客户端
 
 ## 快速开始
 
-### Linux / WSL
+### 直接下载使用（Windows，无需编译）
 
-```bash
-# 1. 克隆
-git clone http://git.cpptrain.top/MT/mcp_mt.git
-cd mcp_mt
-
-# 2. 安装依赖 + 编译
-bash setup_linux.sh
-
-# 3. 测试
-./build/test_mcp
-
-# 4. 启动服务
-./build/server --no-http
-```
-
-### Windows
+从 [GitHub Releases](../../releases) 下载 `paper-mcp-server-windows-x64.zip`，解压到任意目录：
 
 ```powershell
-git clone http://git.cpptrain.top/MT/mcp_mt.git
-cd mcp_mt
+# 1. 解压
+unzip paper-mcp-server-windows-x64.zip -d C:\paper-mcp-server
+
+# 2. 接入 Claude Code（全局）
+claude mcp add -s user paper-mcp "C:\paper-mcp-server\server.exe"
+```
+
+然后编辑 `C:\Users\<用户名>\.claude.json`，补上 `args` / `cwd` / 视觉 API 环境变量（见下方 [接入 Claude](#接入-claudewindows) 章节）。
+
+> **前提**：系统需安装 Python 3（`python` 命令可用），exe 本身无其他依赖。
+
+### 从源码构建
+
+#### Windows
+
+**前置依赖**
+
+| 依赖 | 用途 | 安装方式 |
+|------|------|----------|
+| MSYS2 (MinGW-w64) | C++17 编译器 | [msys2.org](https://www.msys2.org/) → `pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja` |
+| vcpkg | C++ 包管理 | `git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg && C:\vcpkg\bootstrap-vcpkg.bat` |
+| Python 3 | 工具脚本 | [python.org](https://www.python.org/downloads/) 安装并添加到 PATH |
+
+**一键构建**
+
+```powershell
+git clone https://github.com/maziyee/paper---mcp---server.git
+cd paper---mcp---server
 setup_windows.bat
 ```
 
-## 部署到 Claude
+构建产物 `build\server.exe`（约 6.5 MB）**静态链接，零 DLL 依赖**，可直接拷贝运行。
 
-### Claude Desktop（Windows）
+> `server.exe` 内部通过 `popen("python ...")` 调用 Python 脚本，所以 Python 3 仍需在 PATH 中。
 
-编译完成后，编辑 Claude Desktop 配置文件（`%APPDATA%\Claude\claude_desktop_config.json`）：
+**手动构建**
+
+```powershell
+C:\vcpkg\vcpkg install spdlog nlohmann-json cpp-httplib --triplet x64-mingw-static
+mkdir build && cd build
+cmake .. -G Ninja ^
+  -DCMAKE_BUILD_TYPE=Release ^
+  -DCMAKE_TOOLCHAIN_FILE="C:\vcpkg\scripts\buildsystems\vcpkg.cmake" ^
+  -DVCPKG_TARGET_TRIPLET=x64-mingw-static ^
+  -DCMAKE_EXE_LINKER_FLAGS="-static-libstdc++ -static-libgcc -static"
+cmake --build .
+```
+
+**Windows 适配说明**
+
+| 适配项 | 说明 |
+|------|------|
+| `python3` → `python` | Windows 上 Python 命令为 `python`，非 `python3` |
+| `_WIN32_WINNT=0x0A00` | 指定 Win10+ SDK 级别，cpp-httplib 需要 |
+| `mcp_httplib_wrapper.h` | 绕过 MinGW 头文件缺少 `GetAddrInfoExCancel` |
+| vcpkg triplet | `x64-mingw-static` 静态链接，产物零依赖 |
+| `CMAKE_BUILD_TYPE=Release` | 避免链接 debug 版 DLL |
+
+#### Linux / WSL
+
+```bash
+git clone https://github.com/maziyee/paper---mcp---server.git
+cd paper---mcp---server
+bash setup_linux.sh
+./build/test_mcp
+./build/server --no-http
+```
+
+---
+
+## 接入 Claude（Windows）
+
+### 方式一：Claude Code CLI（推荐，全局生效）
+
+```powershell
+claude mcp add -s user paper-mcp "J:\path\to\mcp_mt\build\server.exe"
+```
+
+然后编辑 `C:\Users\<用户名>\.claude.json`，找到 `mcpServers.paper-mcp`，补全为：
+
+```json
+{
+  "type": "stdio",
+  "command": "J:\\path\\to\\mcp_mt\\build\\server.exe",
+  "args": ["--no-http"],
+  "cwd": "J:\\path\\to\\mcp_mt",
+  "env": {
+    "VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "VISION_MODEL": "qwen3.7-plus",
+    "VISION_API_KEY": "<你的 DashScope API Key>"
+  }
+}
+```
+
+重新加载 VSCode（`Ctrl+Shift+P` → `Developer: Reload Window`）。
+
+> `cwd` 必须设为项目根目录，server.exe 用相对路径调用 `tools/scripts/*.py`。
+
+### 方式二：项目级 .mcp.json
+
+在 VSCode 工作区根目录创建 `.mcp.json`：
 
 ```json
 {
   "mcpServers": {
     "paper-mcp": {
-      "command": "D:/projects/mcp_mt/build/Release/server.exe",
+      "type": "stdio",
+      "command": "./utils/mcp_mt/build/server.exe",
       "args": ["--no-http"],
+      "cwd": "j:/projects/paper-mcp-server/utils/mcp_mt",
+      "env": {
+        "VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "VISION_MODEL": "qwen3.7-plus",
+        "VISION_API_KEY": "<你的 DashScope API Key>"
+      }
+    }
+  }
+}
+```
+
+### 方式三：Claude Desktop
+
+编辑 `%APPDATA%\Claude\claude_desktop_config.json`：
+
+```json
+{
+  "mcpServers": {
+    "paper-mcp": {
+      "command": "J:\\path\\to\\mcp_mt\\build\\server.exe",
+      "args": ["--no-http"],
+      "env": {
+        "VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "VISION_MODEL": "qwen3.7-plus",
+        "VISION_API_KEY": "<你的 DashScope API Key>"
+      }
+    }
+  }
+}
+```
+
+重启 Claude Desktop。
+
+---
+
+## 接入 Claude（WSL / Linux）
+
+### Claude Code VSCode 扩展（WSL）
+
+WSL 下 VSCode 扩展的 PATH 不包含 nvm 安装的 Node.js，需用 `mcp-node` + `mcp_bridge.js` 桥接：
+
+```json
+{
+  "mcpServers": {
+    "paper-mcp": {
+      "type": "stdio",
+      "command": "/home/you_dian/.local/bin/mcp-node",
+      "args": ["/home/you_dian/MCP/mcp_mt/scripts/mcp_bridge.js"],
+      "cwd": "/home/you_dian/MCP/mcp_mt",
       "env": {
         "VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
         "VISION_MODEL": "qwen3.7-plus",
@@ -94,7 +220,20 @@ setup_windows.bat
 }
 ```
 
-重启 Claude Desktop 即可使用。
+**Bridge 架构（WSL 专用）**
+
+```
+Claude Code (VSCode 扩展)
+    │  spawn mcp-node → 自动找到 VSCode Node.js
+    ▼
+mcp_bridge.js (Node.js 中继)
+    │  spawn server --no-http
+    ▼
+paper-mcp C++ Server (stdio 模式)
+    │
+    ▼
+Python 脚本 / 视觉大模型 API
+```
 
 ### Claude Desktop（macOS / Linux）
 
@@ -116,91 +255,18 @@ setup_windows.bat
 }
 ```
 
-### Claude Code VSCode 扩展（Windows 原生）
+---
 
-Windows 下 VSCode 的 PATH 环境是完整的，可直接使用 Node.js：
+## 故障排查
 
-```json
-{
-  "mcpServers": {
-    "paper-mcp": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["D:/projects/mcp_mt/scripts/mcp_bridge.js"],
-      "cwd": "D:/projects/mcp_mt",
-      "env": {
-        "VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        "VISION_MODEL": "qwen3.7-plus",
-        "VISION_API_KEY": "<your-api-key>"
-      }
-    }
-  }
-}
-```
+| 症状 | 原因 | 解决 |
+|------|------|------|
+| `Process exited with code 3221225781` | 缺少 DLL（`0xC0000135`） | 用 `x64-mingw-static` triplet 重新构建 |
+| 视觉工具返回空 | `python3` 找不到 | 确认源码中已改为 `python`（Windows 适配） |
+| 视觉工具返回 "Connection refused" | 环境变量未传递 | 检查 `env` 字段是否正确；确认 `cwd` 已设置 |
+| 工具调用后无反应 | Python 脚本路径错误 | 确认 `cwd` 指向项目根目录 |
 
-> **Windows vs WSL 区别**：Windows 原生环境不需要 `mcp-node` 桥接脚本，可直接用 `node` 调用 `mcp_bridge.js`。`mcp-node` 仅为解决 WSL 下 PATH 不完整的问题。
-
-## 前置依赖
-
-| 依赖 | 用途 |
-|------|------|
-| CMake >= 3.10 | 构建系统 |
-| C++17 编译器 (GCC/MSVC) | 编译 |
-| vcpkg | C++ 包管理 |
-| Python 3 | 工具脚本 |
-| spdlog, nlohmann-json, httplib | 通过 vcpkg 安装 |
-
-## 配置 Claude Code（VSCode 扩展 / WSL）
-
-在项目根目录创建 `.mcp.json`：
-
-```json
-{
-  "mcpServers": {
-    "paper-mcp": {
-      "type": "stdio",
-      "command": "/home/you_dian/.local/bin/mcp-node",
-      "args": ["/home/you_dian/MCP/mcp_mt/scripts/mcp_bridge.js"],
-      "cwd": "/home/you_dian/MCP/mcp_mt",
-      "env": {
-        "VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        "VISION_MODEL": "qwen3.7-plus",
-        "VISION_API_KEY": "<your-api-key>"
-      }
-    }
-  }
-}
-```
-
-> **WSL 用户注意**：VSCode 扩展宿主机的 PATH 不包含 nvm 安装的 Node.js，会导致 `spawn ENOENT`。需要用 VSCode 自带的 Node.js 启动。`mcp-node` 脚本会自动发现 VSCode 的 Node.js 路径。
-
-### 所需文件
-
-| 文件 | 作用 |
-|------|------|
-| `.mcp.json` | MCP 服务器配置（放项目根目录） |
-| `mcp_bridge.js` | Node.js 中继，启动 C++ server 并桥接管道 |
-| `mcp-node` | 自动发现 VSCode Node.js 的 wrapper 脚本 |
-
-### Bridge 架构（WSL 专用）
-
-```
-Claude Code (VSCode 扩展)
-    │  spawn mcp-node → 自动找到 VSCode Node.js
-    ▼
-mcp_bridge.js (Node.js 中继)
-    │  spawn server --no-http
-    ▼
-paper-mcp C++ Server (stdio 模式)
-    │
-    ▼
-Python 脚本 ────────────► 论文数据处理
-视觉大模型 API (DashScope) ► 图片/视频分析
-```
-
-VSCode 扩展的 MCP Gateway 在 WSL 下 spawn 进程时 PATH 不完整，直接用 C++ 二进制或系统 Python 都会报 `ENOENT`。通过 `mcp-node`（指向 VSCode 自带的 Node.js）可以绕过此限制。
-
-### 传输协议兼容
+## 传输协议兼容
 
 C++ 服务器支持两种 MCP 传输格式：
 
@@ -214,10 +280,7 @@ C++ 服务器支持两种 MCP 传输格式：
 ## 用 Ollama 本地模型测试
 
 ```bash
-# 1. 启动 Ollama
 ollama serve
-
-# 2. 运行 demo（使用 qwen2.5:7b）
 python3 scripts/ollama_mcp_demo.py
 ```
 
@@ -235,25 +298,43 @@ python3 scripts/ollama_mcp_demo.py
 
 ```
 mcp_mt/
-├── include/           # 头文件
-│   ├── mcp_types.h    # 类型定义（ContentItem, ToolResult, ToolInputSchema）
-│   ├── mcp_server.h   # MCP 协议层
-│   ├── rpc_manager.h  # RPC 路由
-│   ├── my_rpc.h       # RPC 基类
-│   ├── http_rpc.h     # HTTP 传输
-│   └── std_handle_rpc.h # stdio 传输
+├── include/                   # 头文件
+│   ├── mcp_types.h            # 类型定义
+│   ├── mcp_server.h           # MCP 协议层
+│   ├── rpc_manager.h          # RPC 路由
+│   ├── my_rpc.h / http_rpc.h / std_handle_rpc.h
+│   └── mcp_httplib_wrapper.h  # MinGW 兼容 wrapper
 ├── mpc_src/
-│   ├── common/        # 公共实现
-│   └── server/        # 服务端入口
+│   ├── common/                # 公共实现
+│   └── server/                # 服务端入口
 ├── tools/
-│   ├── paper_tools.cpp   # 论文工具注册
-│   ├── vision_tools.cpp  # 视觉工具注册（图片分析/OCR/视频）
-│   ├── vision_tools.h    # 视觉工具头文件
-│   └── scripts/          # Python 脚本
-├── test_tools/        # 测试
-├── config/            # 配置文件
-└── papers/            # 论文数据
+│   ├── paper_tools.cpp        # 论文工具注册
+│   ├── vision_tools.cpp       # 视觉工具注册
+│   ├── vision_tools.h
+│   └── scripts/               # Python 脚本
+│       ├── vision_client.py   # 视觉 API 客户端（DashScope）
+│       ├── extract_data_points.py
+│       ├── search_latest_data.py
+│       ├── update_paper_data.py
+│       └── cnki_search.py     # 知网搜索
+├── test_tools/                # 测试
+├── config/                    # 配置文件
+├── logs/                      # 运行日志
+├── papers/                    # 论文数据
+├── scripts/                   # 辅助脚本（bridge 等）
+├── setup_linux.sh             # Linux 一键构建
+└── setup_windows.bat          # Windows 一键构建
 ```
+
+## 前置依赖
+
+| 依赖 | 用途 | Windows 获取方式 |
+|------|------|------------------|
+| CMake >= 3.10 | 构建系统 | MSYS2: `pacman -S mingw-w64-x86_64-cmake` |
+| C++17 编译器 (GCC) | 编译 | MSYS2: `pacman -S mingw-w64-x86_64-gcc` |
+| Ninja | 构建生成器 | MSYS2: `pacman -S mingw-w64-x86_64-ninja` |
+| vcpkg | C++ 包管理 | `git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg` |
+| Python 3 | 工具脚本 | [python.org](https://www.python.org/downloads/) |
 
 ## 命令行参数
 

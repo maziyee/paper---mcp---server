@@ -6,7 +6,7 @@
 #include <sstream>
 #include <thread>
 
-#include "httplib.h"
+#include "mcp_httplib_wrapper.h"
 #include "log_manager.h"
 #include "my_rpc.h"
 #include "nlohmann/json.hpp"

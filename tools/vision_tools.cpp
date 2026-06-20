@@ -78,7 +78,7 @@ void RegisterVisionTools(McpServer& mcp) {
           payload["max_tokens"] = max_tokens;
           payload["detail"] = detail;
 
-          std::string cmd = std::string("python3 ") + kScriptPath +
+          std::string cmd = std::string("python ") + kScriptPath +
                             " analyze_image " + Quote(payload.dump());
 
           MCP_LOG_INFO("analyze_image: source={}", source);
@@ -122,7 +122,7 @@ void RegisterVisionTools(McpServer& mcp) {
           if (!language.empty()) payload["language"] = language;
           payload["max_tokens"] = max_tokens;
 
-          std::string cmd = std::string("python3 ") + kScriptPath +
+          std::string cmd = std::string("python ") + kScriptPath +
                             " ocr_image " + Quote(payload.dump());
 
           MCP_LOG_INFO("ocr_image: source={} format={}", source, format);
@@ -181,7 +181,7 @@ void RegisterVisionTools(McpServer& mcp) {
           if (!prompt.empty()) payload["prompt"] = prompt;
           payload["max_tokens"] = 4000;
 
-          std::string cmd = std::string("python3 ") + kScriptPath +
+          std::string cmd = std::string("python ") + kScriptPath +
                             " compare_images " + Quote(payload.dump());
 
           MCP_LOG_INFO("compare_images: count={}", sources_arr.size());
@@ -217,7 +217,7 @@ void RegisterVisionTools(McpServer& mcp) {
           payload["video_source"] = source;
           if (!prompt.empty()) payload["prompt"] = prompt;
 
-          std::string cmd = std::string("python3 ") + kScriptPath +
+          std::string cmd = std::string("python ") + kScriptPath +
                             " analyze_video " + Quote(payload.dump());
 
           MCP_LOG_INFO("analyze_video: source={}", source);

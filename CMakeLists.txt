@@ -81,6 +81,7 @@ foreach(target test test_mcp server)
     )
 
     target_compile_definitions(${target} PRIVATE
+        _WIN32_WINNT=0x0A00
         THREADED
         ZK_DEPRECATED=1
     )

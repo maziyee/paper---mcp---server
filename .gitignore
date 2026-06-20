@@ -16,12 +16,16 @@ __pycache__/
 # Papers data (runtime)
 papers/
 reports/
+release/
 
 # IDE
 .idea/
 *.swp
 *.swo
 *~
+
+# MCP local config (contains API keys)
+.mcp.json
 
 # OS
 .DS_Store
