@@ -54,11 +54,10 @@ def load_config():
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
         pass
 
-    # 2. 环境变量覆盖
+    # 2. 环境变量覆盖 (仅 base_url 和 model，API key 只用配置文件)
     env_map = {
         "VISION_BASE_URL": "base_url",
         "VISION_MODEL": "model",
-        "VISION_API_KEY": "api_key",
     }
     for env_name, cfg_key in env_map.items():
         val = os.environ.get(env_name, "").strip()
@@ -363,36 +362,50 @@ TASK_HANDLERS = {
 
 
 def main():
+    # 强制 UTF-8 输出, 避免 Windows GBK 编码导致 JSON 解析失败
+    sys.stdout.reconfigure(encoding='utf-8')
     if len(sys.argv) < 3:
         print(json.dumps({
             "error": f"用法: {sys.argv[0]} <task_type> '<json_payload>'",
             "task_types": list(TASK_HANDLERS.keys()),
-        }, ensure_ascii=False))
+        }, ensure_ascii=True))
         sys.exit(1)
 
     task_type = sys.argv[1]
-    payload_str = sys.argv[2]
+
+    # 支持两种传参方式: 直接 JSON 字符串 或 --file <路径>
+    if len(sys.argv) >= 4 and sys.argv[2] == "--file":
+        with open(sys.argv[3], "r", encoding="utf-8") as f:
+            payload_str = f.read()
+    elif len(sys.argv) >= 3:
+        payload_str = sys.argv[2]
+    else:
+        print(json.dumps({
+            "error": f"用法: {sys.argv[0]} <task_type> '<json_payload>' 或 --file <路径>",
+            "task_types": list(TASK_HANDLERS.keys()),
+        }, ensure_ascii=True))
+        sys.exit(1)
 
     if task_type not in TASK_HANDLERS:
         print(json.dumps({
             "error": f"未知 task_type: {task_type}",
             "available": list(TASK_HANDLERS.keys()),
-        }, ensure_ascii=False))
+        }, ensure_ascii=True))
         sys.exit(1)
 
     try:
         payload = json.loads(payload_str)
     except json.JSONDecodeError as e:
-        print(json.dumps({"error": f"JSON 解析失败: {e}"}, ensure_ascii=False))
+        print(json.dumps({"error": f"JSON 解析失败: {e}"}, ensure_ascii=True))
         sys.exit(1)
 
     try:
         config = load_config()
         handler = TASK_HANDLERS[task_type]
         result = handler(config, payload)
-        print(json.dumps(result, ensure_ascii=False))
+        print(json.dumps(result, ensure_ascii=True))
     except Exception as e:
-        print(json.dumps({"error": str(e), "task_type": task_type}, ensure_ascii=False))
+        print(json.dumps({"error": str(e), "task_type": task_type}, ensure_ascii=True))
         sys.exit(1)
 
 

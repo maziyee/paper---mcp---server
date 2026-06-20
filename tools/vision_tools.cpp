@@ -2,15 +2,23 @@
 
 #include <array>
 #include <cstdio>
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <string>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 
 #include "log_manager.h"
 #include "nlohmann/json.hpp"
 
 namespace {
 
-// ======== 工具函数 (与 paper_tools.cpp 一致的 popen + Quote 模式) ========
+// ======== 工具函数 ========
 
 std::string Exec(const std::string& cmd) {
   std::string result;
@@ -24,18 +32,69 @@ std::string Exec(const std::string& cmd) {
   return result;
 }
 
+// Windows cmd.exe 专用: 用 "" 转义内部引号 (非 Unix 的 \")
+// 参考: https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/cmd
 std::string Quote(const std::string& s) {
   std::string out = "\"";
   for (char c : s) {
-    if (c == '"' || c == '\\') out += '\\';
-    out += c;
+    if (c == '"') {
+      out += "\"\"";  // cmd.exe: 内部引号加倍
+    } else {
+      out += c;
+    }
   }
   out += '"';
   return out;
 }
 
-// 获取脚本路径 (相对于可执行文件)
-const char* kScriptPath = "tools/scripts/vision_client.py";
+// Python 解释器
+const char* kPythonPath = "python";
+
+// 获取可执行文件所在目录 (跨平台)
+std::string GetExeDir() {
+  namespace fs = std::filesystem;
+#ifdef _WIN32
+  wchar_t buf[MAX_PATH];
+  DWORD len = GetModuleFileNameW(nullptr, buf, MAX_PATH);
+  if (len > 0 && len < MAX_PATH) {
+    return fs::path(std::wstring(buf, len)).parent_path().string();
+  }
+#else
+  char buf[PATH_MAX];
+  ssize_t len = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+  if (len > 0) {
+    buf[len] = '\0';
+    return fs::path(buf).parent_path().string();
+  }
+#endif
+  return fs::current_path().string();  // 回退
+}
+
+// 从可执行文件位置推算 vision_client.py 路径
+// 支持两种布局:
+//   源码: build/server.exe → ../tools/scripts/vision_client.py
+//   发布: release/paper-mcp-server/server.exe → tools/vision_client.py
+std::string FindScript() {
+  namespace fs = std::filesystem;
+  fs::path exe_dir = GetExeDir();
+
+  // 源码布局: build/ → ../tools/scripts/
+  fs::path src_path = exe_dir / ".." / "tools" / "scripts" / "vision_client.py";
+  if (fs::exists(src_path)) return fs::absolute(src_path).string();
+
+  // 发布布局: exe 同级 tools/
+  fs::path rel_path = exe_dir / "tools" / "vision_client.py";
+  if (fs::exists(rel_path)) return fs::absolute(rel_path).string();
+
+  // 回退
+  return fs::absolute(exe_dir / "vision_client.py").string();
+}
+
+// 脚本路径 (延迟初始化)
+const std::string& GetScriptPath() {
+  static std::string path = FindScript();
+  return path;
+}
 
 }  // namespace
 
@@ -78,11 +137,18 @@ void RegisterVisionTools(McpServer& mcp) {
           payload["max_tokens"] = max_tokens;
           payload["detail"] = detail;
 
-          std::string cmd = std::string("python ") + kScriptPath +
-                            " analyze_image " + Quote(payload.dump());
+          // 将 payload 写入临时文件，避免命令行转义问题
+          std::string tmpfile = "analyze_image_payload.json";
+          {
+            std::ofstream ofs(tmpfile);
+            ofs << payload.dump();
+          }
+          std::string cmd = std::string(kPythonPath) + " " + GetScriptPath() +
+                            " analyze_image --file " + tmpfile + " 2>&1";
 
           MCP_LOG_INFO("analyze_image: source={}", source);
           std::string out = Exec(cmd);
+          std::remove(tmpfile.c_str());
           return MakeTextResult(out);
         });
   }
@@ -122,8 +188,8 @@ void RegisterVisionTools(McpServer& mcp) {
           if (!language.empty()) payload["language"] = language;
           payload["max_tokens"] = max_tokens;
 
-          std::string cmd = std::string("python ") + kScriptPath +
-                            " ocr_image " + Quote(payload.dump());
+          std::string cmd = std::string(kPythonPath) + " " + GetScriptPath() +
+                            " ocr_image " + Quote(payload.dump()) + " 2>&1";
 
           MCP_LOG_INFO("ocr_image: source={} format={}", source, format);
           std::string out = Exec(cmd);
@@ -181,8 +247,8 @@ void RegisterVisionTools(McpServer& mcp) {
           if (!prompt.empty()) payload["prompt"] = prompt;
           payload["max_tokens"] = 4000;
 
-          std::string cmd = std::string("python ") + kScriptPath +
-                            " compare_images " + Quote(payload.dump());
+          std::string cmd = std::string(kPythonPath) + " " + GetScriptPath() +
+                            " compare_images " + Quote(payload.dump()) + " 2>&1";
 
           MCP_LOG_INFO("compare_images: count={}", sources_arr.size());
           std::string out = Exec(cmd);
@@ -217,8 +283,8 @@ void RegisterVisionTools(McpServer& mcp) {
           payload["video_source"] = source;
           if (!prompt.empty()) payload["prompt"] = prompt;
 
-          std::string cmd = std::string("python ") + kScriptPath +
-                            " analyze_video " + Quote(payload.dump());
+          std::string cmd = std::string(kPythonPath) + " " + GetScriptPath() +
+                            " analyze_video " + Quote(payload.dump()) + " 2>&1";
 
           MCP_LOG_INFO("analyze_video: source={}", source);
           std::string out = Exec(cmd);
