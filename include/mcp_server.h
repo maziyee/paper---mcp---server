@@ -57,6 +57,11 @@ class McpServer {
   std::string GetLastError() const;
   int GetLastErrorCode() const;
 
+  // ======== 查询已注册的定义 ========
+
+  // 返回已注册工具的 JSON 数组（用于初始 SSE 广播等场景）
+  nlohmann::json GetToolDefs() const;
+
  private:
   void FireChange(ChangeType type, const std::string& name,
                   const nlohmann::json& def);

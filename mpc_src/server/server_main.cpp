@@ -14,6 +14,7 @@
 #include "mcp_spdlog_config.h"
 #include "nlohmann/json.hpp"
 #include "paper_tools.h"
+#include "vision_tools.h"
 #include "rpc_manager.h"
 #include "std_handle_rpc.h"
 
@@ -185,15 +186,35 @@ int main(int argc, char* argv[]) {
       [](mcp::ChangeType type, const std::string& name,
          const nlohmann::json&) {
         const char* t = "";
+        const char* mcp_event = "";
         switch (type) {
-          case mcp::ChangeType::ToolAdded: t = "Tool"; break;
-          case mcp::ChangeType::ResourceAdded: t = "Resource"; break;
-          case mcp::ChangeType::PromptAdded: t = "Prompt"; break;
+          case mcp::ChangeType::ToolAdded:
+            t = "Tool";
+            mcp_event = "tools/list_changed";
+            break;
+          case mcp::ChangeType::ResourceAdded:
+            t = "Resource";
+            mcp_event = "resources/list_changed";
+            break;
+          case mcp::ChangeType::PromptAdded:
+            t = "Prompt";
+            mcp_event = "prompts/list_changed";
+            break;
         }
         MCP_LOG_INFO("[{}] {} registered", t, name);
+
+        // HTTP 模式运行时，通过 SSE 向所有客户端推送变更通知
+        if (g_http_server) {
+          nlohmann::json notification;
+          notification["jsonrpc"] = "2.0";
+          notification["method"] = "notifications/" + std::string(mcp_event);
+          notification["params"] = nlohmann::json::object();
+          g_http_server->BroadcastEvent(mcp_event, notification.dump());
+        }
       });
 
   RegisterPaperTools(mcp_server);
+  RegisterVisionTools(mcp_server);
 
   if (!mcp_server.InstallTo(manager)) {
     MCP_LOG_ERROR("InstallTo failed: [{}] {}",
@@ -223,9 +244,25 @@ int main(int argc, char* argv[]) {
 
   std::thread http_thread;
   if (cfg.http_enabled) {
-    http_thread = std::thread([&manager, &cfg]() {
+    http_thread = std::thread([&manager, &cfg, &mcp_server]() {
       mcp::HttpRpcServer http_server(cfg.http_host, cfg.http_port, manager);
       g_http_server = &http_server;
+
+      // 首个 SSE 客户端连接时，补发已注册的工具/资源/提示变更通知
+      http_server.SetOnFirstSseClient([&mcp_server]() {
+        auto tools = mcp_server.GetToolDefs();
+        if (!tools.empty()) {
+          nlohmann::json notification;
+          notification["jsonrpc"] = "2.0";
+          notification["method"] = "notifications/tools/list_changed";
+          notification["params"] = nlohmann::json::object();
+          if (g_http_server) {
+            g_http_server->BroadcastEvent("tools/list_changed",
+                                          notification.dump());
+          }
+        }
+      });
+
       http_server.Start();
       MCP_LOG_INFO("HTTP transport stopped");
     });

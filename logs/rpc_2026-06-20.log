@@ -1,0 +1,141 @@
+[2026-06-20 13:19:05.946] [info] [49418] Server paper-mcp v1.0.0 starting (http=false, stdio=true)
+[2026-06-20 13:19:05.946] [info] [49418] McpServer created: paper-mcp v1.0.0
+[2026-06-20 13:19:05.948] [info] [49418] Tool registered: extract_data_points (1 props)
+[2026-06-20 13:19:05.948] [info] [49418] [Tool] extract_data_points registered
+[2026-06-20 13:19:05.948] [info] [49418] Tool registered: search_latest_data (4 props)
+[2026-06-20 13:19:05.948] [info] [49418] [Tool] search_latest_data registered
+[2026-06-20 13:19:05.949] [info] [49418] Tool registered: update_paper_data (2 props)
+[2026-06-20 13:19:05.949] [info] [49418] [Tool] update_paper_data registered
+[2026-06-20 13:19:05.949] [info] [49418] Installing MCP methods (tools=3, resources=0, prompts=0)...
+[2026-06-20 13:19:05.949] [info] [49418] MCP methods installed successfully
+[2026-06-20 13:19:05.949] [info] [49418] Stdio transport started (stdio)
+[2026-06-20 13:19:06.134] [info] [49418] ReadMessage: raw JSON mode, len=305
+[2026-06-20 13:19:06.175] [info] [3378] HTTP POST /mcp -> 200
+[2026-06-20 13:19:06.213] [info] [3378] Client initialized
+[2026-06-20 13:19:06.213] [info] [3378] HTTP POST /mcp -> 200
+[2026-06-20 13:19:06.273] [info] [49418] ReadMessage: raw JSON mode, len=54
+[2026-06-20 13:19:06.273] [info] [49418] Client initialized
+[2026-06-20 13:19:06.273] [info] [49418] ReadMessage: raw JSON mode, len=46
+[2026-06-20 13:19:06.342] [info] [3378] HTTP POST /mcp -> 200
+[2026-06-20 13:19:06.621] [info] [49418] ReadMessage: EOF on first read
+[2026-06-20 13:19:06.621] [info] [49418] Stdio transport stopped
+[2026-06-20 13:19:06.621] [info] [49418] Server exited
+[2026-06-20 13:19:07.399] [info] [49482] Server paper-mcp v1.0.0 starting (http=false, stdio=true)
+[2026-06-20 13:19:07.399] [info] [49482] McpServer created: paper-mcp v1.0.0
+[2026-06-20 13:19:07.399] [info] [49482] Tool registered: extract_data_points (1 props)
+[2026-06-20 13:19:07.399] [info] [49482] [Tool] extract_data_points registered
+[2026-06-20 13:19:07.399] [info] [49482] Tool registered: search_latest_data (4 props)
+[2026-06-20 13:19:07.399] [info] [49482] [Tool] search_latest_data registered
+[2026-06-20 13:19:07.399] [info] [49482] Tool registered: update_paper_data (2 props)
+[2026-06-20 13:19:07.399] [info] [49482] [Tool] update_paper_data registered
+[2026-06-20 13:19:07.399] [info] [49482] Installing MCP methods (tools=3, resources=0, prompts=0)...
+[2026-06-20 13:19:07.400] [info] [49482] MCP methods installed successfully
+[2026-06-20 13:19:07.400] [info] [49482] Stdio transport started (stdio)
+[2026-06-20 13:19:07.650] [info] [49482] ReadMessage: raw JSON mode, len=305
+[2026-06-20 13:19:07.711] [info] [3379] HTTP POST /mcp -> 200
+[2026-06-20 13:19:07.737] [info] [3379] Client initialized
+[2026-06-20 13:19:07.737] [info] [3379] HTTP POST /mcp -> 200
+[2026-06-20 13:19:07.789] [info] [3379] HTTP POST /mcp -> 200
+[2026-06-20 13:19:07.881] [info] [49482] ReadMessage: raw JSON mode, len=54
+[2026-06-20 13:19:07.881] [info] [49482] Client initialized
+[2026-06-20 13:19:07.881] [info] [49482] ReadMessage: raw JSON mode, len=46
+[2026-06-20 13:30:13.903] [info] [52530] Server paper-mcp v1.0.0 starting (http=false, stdio=true)
+[2026-06-20 13:30:13.903] [info] [52530] McpServer created: paper-mcp v1.0.0
+[2026-06-20 13:30:13.903] [info] [52530] Tool registered: extract_data_points (1 props)
+[2026-06-20 13:30:13.903] [info] [52530] [Tool] extract_data_points registered
+[2026-06-20 13:30:13.903] [info] [52530] Tool registered: search_latest_data (4 props)
+[2026-06-20 13:30:13.903] [info] [52530] [Tool] search_latest_data registered
+[2026-06-20 13:30:13.904] [info] [52530] Tool registered: update_paper_data (2 props)
+[2026-06-20 13:30:13.904] [info] [52530] [Tool] update_paper_data registered
+[2026-06-20 13:30:13.904] [info] [52530] Tool registered: analyze_image (4 props)
+[2026-06-20 13:30:13.904] [info] [52530] [Tool] analyze_image registered
+[2026-06-20 13:30:13.904] [info] [52530] Tool registered: ocr_image (4 props)
+[2026-06-20 13:30:13.904] [info] [52530] [Tool] ocr_image registered
+[2026-06-20 13:30:13.904] [info] [52530] Tool registered: compare_images (2 props)
+[2026-06-20 13:30:13.904] [info] [52530] [Tool] compare_images registered
+[2026-06-20 13:30:13.904] [info] [52530] Tool registered: analyze_video (2 props)
+[2026-06-20 13:30:13.904] [info] [52530] [Tool] analyze_video registered
+[2026-06-20 13:30:13.904] [info] [52530] Installing MCP methods (tools=7, resources=0, prompts=0)...
+[2026-06-20 13:30:13.904] [info] [52530] MCP methods installed successfully
+[2026-06-20 13:30:13.904] [info] [52530] Stdio transport started (stdio)
+[2026-06-20 13:30:13.904] [info] [52530] ReadMessage: EOF on first read
+[2026-06-20 13:30:13.904] [info] [52530] Stdio transport stopped
+[2026-06-20 13:30:13.904] [info] [52530] Server exited
+[2026-06-20 13:30:18.428] [info] [52592] Server paper-mcp v1.0.0 starting (http=false, stdio=true)
+[2026-06-20 13:30:18.428] [info] [52592] McpServer created: paper-mcp v1.0.0
+[2026-06-20 13:30:18.428] [info] [52592] Tool registered: extract_data_points (1 props)
+[2026-06-20 13:30:18.428] [info] [52592] [Tool] extract_data_points registered
+[2026-06-20 13:30:18.429] [info] [52592] Tool registered: search_latest_data (4 props)
+[2026-06-20 13:30:18.429] [info] [52592] [Tool] search_latest_data registered
+[2026-06-20 13:30:18.429] [info] [52592] Tool registered: update_paper_data (2 props)
+[2026-06-20 13:30:18.429] [info] [52592] [Tool] update_paper_data registered
+[2026-06-20 13:30:18.429] [info] [52592] Tool registered: analyze_image (4 props)
+[2026-06-20 13:30:18.429] [info] [52592] [Tool] analyze_image registered
+[2026-06-20 13:30:18.429] [info] [52592] Tool registered: ocr_image (4 props)
+[2026-06-20 13:30:18.429] [info] [52592] [Tool] ocr_image registered
+[2026-06-20 13:30:18.429] [info] [52592] Tool registered: compare_images (2 props)
+[2026-06-20 13:30:18.429] [info] [52592] [Tool] compare_images registered
+[2026-06-20 13:30:18.429] [info] [52592] Tool registered: analyze_video (2 props)
+[2026-06-20 13:30:18.429] [info] [52592] [Tool] analyze_video registered
+[2026-06-20 13:30:18.429] [info] [52592] Installing MCP methods (tools=7, resources=0, prompts=0)...
+[2026-06-20 13:30:18.429] [info] [52592] MCP methods installed successfully
+[2026-06-20 13:30:18.429] [info] [52592] Stdio transport started (stdio)
+[2026-06-20 13:30:18.429] [info] [52592] ReadMessage: raw JSON mode, len=151
+[2026-06-20 13:30:18.429] [info] [52592] ReadMessage: raw JSON mode, len=58
+[2026-06-20 13:30:18.430] [info] [52592] ReadMessage: EOF on first read
+[2026-06-20 13:30:18.430] [info] [52592] Stdio transport stopped
+[2026-06-20 13:30:18.430] [info] [52592] Server exited
+[2026-06-20 13:52:17.620] [info] [49482] ReadMessage: EOF on first read
+[2026-06-20 13:52:17.624] [info] [49482] Stdio transport stopped
+[2026-06-20 13:52:17.624] [info] [49482] Server exited
+[2026-06-20 13:52:21.147] [info] [56771] Server paper-mcp v1.0.0 starting (http=false, stdio=true)
+[2026-06-20 13:52:21.147] [info] [56771] McpServer created: paper-mcp v1.0.0
+[2026-06-20 13:52:21.147] [info] [56771] Tool registered: extract_data_points (1 props)
+[2026-06-20 13:52:21.147] [info] [56771] [Tool] extract_data_points registered
+[2026-06-20 13:52:21.147] [info] [56771] Tool registered: search_latest_data (4 props)
+[2026-06-20 13:52:21.147] [info] [56771] [Tool] search_latest_data registered
+[2026-06-20 13:52:21.147] [info] [56771] Tool registered: update_paper_data (2 props)
+[2026-06-20 13:52:21.147] [info] [56771] [Tool] update_paper_data registered
+[2026-06-20 13:52:21.147] [info] [56771] Tool registered: analyze_image (4 props)
+[2026-06-20 13:52:21.147] [info] [56771] [Tool] analyze_image registered
+[2026-06-20 13:52:21.147] [info] [56771] Tool registered: ocr_image (4 props)
+[2026-06-20 13:52:21.147] [info] [56771] [Tool] ocr_image registered
+[2026-06-20 13:52:21.147] [info] [56771] Tool registered: compare_images (2 props)
+[2026-06-20 13:52:21.147] [info] [56771] [Tool] compare_images registered
+[2026-06-20 13:52:21.147] [info] [56771] Tool registered: analyze_video (2 props)
+[2026-06-20 13:52:21.147] [info] [56771] [Tool] analyze_video registered
+[2026-06-20 13:52:21.147] [info] [56771] Installing MCP methods (tools=7, resources=0, prompts=0)...
+[2026-06-20 13:52:21.147] [info] [56771] MCP methods installed successfully
+[2026-06-20 13:52:21.147] [info] [56771] Stdio transport started (stdio)
+[2026-06-20 13:52:21.232] [info] [56771] ReadMessage: raw JSON mode, len=305
+[2026-06-20 13:52:21.251] [info] [56771] ReadMessage: raw JSON mode, len=54
+[2026-06-20 13:52:21.251] [info] [56771] Client initialized
+[2026-06-20 13:52:21.251] [info] [56771] ReadMessage: raw JSON mode, len=46
+[2026-06-20 13:53:25.443] [info] [56771] ReadMessage: raw JSON mode, len=469
+[2026-06-20 13:53:25.444] [info] [56771] analyze_image: source=/home/you_dian/MCP/mcp_mt/papers/老挝犯罪案件统计柱状图.png
+[2026-06-20 14:17:23.975] [info] [56771] ReadMessage: EOF on first read
+[2026-06-20 14:17:23.976] [info] [56771] Stdio transport stopped
+[2026-06-20 14:17:23.976] [info] [56771] Server exited
+[2026-06-20 14:52:11.274] [info] [65832] Server paper-mcp v1.0.0 starting (http=false, stdio=true)
+[2026-06-20 14:52:11.274] [info] [65832] McpServer created: paper-mcp v1.0.0
+[2026-06-20 14:52:11.274] [info] [65832] Tool registered: extract_data_points (1 props)
+[2026-06-20 14:52:11.274] [info] [65832] [Tool] extract_data_points registered
+[2026-06-20 14:52:11.275] [info] [65832] Tool registered: search_latest_data (4 props)
+[2026-06-20 14:52:11.275] [info] [65832] [Tool] search_latest_data registered
+[2026-06-20 14:52:11.275] [info] [65832] Tool registered: update_paper_data (2 props)
+[2026-06-20 14:52:11.275] [info] [65832] [Tool] update_paper_data registered
+[2026-06-20 14:52:11.275] [info] [65832] Tool registered: analyze_image (4 props)
+[2026-06-20 14:52:11.275] [info] [65832] [Tool] analyze_image registered
+[2026-06-20 14:52:11.275] [info] [65832] Tool registered: ocr_image (4 props)
+[2026-06-20 14:52:11.275] [info] [65832] [Tool] ocr_image registered
+[2026-06-20 14:52:11.275] [info] [65832] Tool registered: compare_images (2 props)
+[2026-06-20 14:52:11.275] [info] [65832] [Tool] compare_images registered
+[2026-06-20 14:52:11.275] [info] [65832] Tool registered: analyze_video (2 props)
+[2026-06-20 14:52:11.275] [info] [65832] [Tool] analyze_video registered
+[2026-06-20 14:52:11.275] [info] [65832] Installing MCP methods (tools=7, resources=0, prompts=0)...
+[2026-06-20 14:52:11.275] [info] [65832] MCP methods installed successfully
+[2026-06-20 14:52:11.275] [info] [65832] Stdio transport started (stdio)
+[2026-06-20 14:52:11.518] [info] [65832] ReadMessage: raw JSON mode, len=305
+[2026-06-20 14:52:11.594] [info] [65832] ReadMessage: raw JSON mode, len=54
+[2026-06-20 14:52:11.594] [info] [65832] Client initialized
+[2026-06-20 14:52:11.594] [info] [65832] ReadMessage: raw JSON mode, len=46

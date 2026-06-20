@@ -64,6 +64,17 @@ class HttpRpcServer {
   // 返回 false 表示路径已存在
   bool RegisterSseEndpoint(const std::string& path, SseHandler handler);
 
+  // ======== SSE 广播 ========
+
+  // 向所有已连接的 SSE 客户端广播一条事件
+  // event_type: "tools/list_changed" / "resources/list_changed" / ...
+  // data:       JSON-RPC notification body（不含 event/data 前缀）
+  void BroadcastEvent(const std::string& event_type,
+                      const std::string& data);
+
+  // 设置首个 SSE 客户端连接时的回调（用于推送初始工具/资源列表）
+  void SetOnFirstSseClient(std::function<void()> callback);
+
  private:
   // 连接配置
   std::string host_;

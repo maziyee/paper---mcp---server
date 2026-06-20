@@ -47,112 +47,170 @@ Claude Desktop / MCP 客户端
 
 ## 快速开始
 
-### Linux / WSL
+### 直接下载使用（Windows，无需编译）
 
-```bash
-# 1. 克隆
-git clone http://git.cpptrain.top/MT/mcp_mt.git
-cd mcp_mt
+从 [GitHub Releases](../../releases) 下载 `paper-mcp-server-windows-x64.zip`，解压到任意目录：
 
-# 2. 安装依赖 + 编译
-bash setup_linux.sh
-
-# 3. 测试
-./build/test_mcp
-
-# 4. 启动服务
-./build/server --no-http
+```
+paper-mcp-server/
+├── server.exe              # 主程序（静态链接，零 DLL 依赖）
+├── config/
+│   └── server_config.json  # 编辑此文件，填入视觉 API Key
+├── tools/
+│   └── vision_client.py    # 视觉分析脚本
+├── papers/                 # 论文数据
+└── logs/                   # 运行日志
 ```
 
-### Windows
+**配置步骤：**
 
-```powershell
-git clone http://git.cpptrain.top/MT/mcp_mt.git
-cd mcp_mt
-setup_windows.bat
-```
-
-## 部署到 Claude
-
-### Claude Desktop（Windows）
-
-编译完成后，编辑 Claude Desktop 配置文件（`%APPDATA%\Claude\claude_desktop_config.json`）：
-
-```json
-{
-  "mcpServers": {
-    "paper-mcp": {
-      "command": "D:/projects/mcp_mt/build/Release/server.exe",
-      "args": ["--no-http"],
-      "env": {
-        "VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        "VISION_MODEL": "qwen3.7-plus",
-        "VISION_API_KEY": "<your-api-key>"
-      }
-    }
-  }
-}
-```
-
-重启 Claude Desktop 即可使用。
-
-### Claude Desktop（macOS / Linux）
-
-编辑 `~/Library/Application Support/Claude/claude_desktop_config.json`：
-
-```json
-{
-  "mcpServers": {
-    "paper-mcp": {
-      "command": "/path/to/mcp_mt/build/server",
-      "args": ["--no-http"],
-      "env": {
-        "VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        "VISION_MODEL": "qwen3.7-plus",
-        "VISION_API_KEY": "<your-api-key>"
-      }
-    }
-  }
-}
-```
-
-### Claude Code VSCode 扩展（Windows 原生）
-
-Windows 下 VSCode 的 PATH 环境是完整的，可直接使用 Node.js：
+1. 编辑 `config/server_config.json`，将 `api_key` 改为你的 DashScope API Key
+2. 在 VSCode 工作区根目录或用户目录创建 `.mcp.json`：
 
 ```json
 {
   "mcpServers": {
     "paper-mcp": {
       "type": "stdio",
-      "command": "node",
-      "args": ["D:/projects/mcp_mt/scripts/mcp_bridge.js"],
-      "cwd": "D:/projects/mcp_mt",
-      "env": {
-        "VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        "VISION_MODEL": "qwen3.7-plus",
-        "VISION_API_KEY": "<your-api-key>"
-      }
+      "command": "C:\\path\\to\\paper-mcp-server\\server.exe",
+      "args": ["--no-http"],
+      "cwd": "C:\\path\\to\\paper-mcp-server"
     }
   }
 }
 ```
 
-> **Windows vs WSL 区别**：Windows 原生环境不需要 `mcp-node` 桥接脚本，可直接用 `node` 调用 `mcp_bridge.js`。`mcp-node` 仅为解决 WSL 下 PATH 不完整的问题。
+> **前提**：系统需安装 Python 3（`python` 命令在 PATH 中可用），exe 本身无其他依赖。
 
-## 前置依赖
+3. 重启 Claude Code（`Ctrl+Shift+P` → `Reload Window`）
 
-| 依赖 | 用途 |
+### 从源码构建
+
+#### Windows
+
+**前置依赖**
+
+| 依赖 | 用途 | 安装方式 |
+|------|------|----------|
+| MSYS2 (MinGW-w64) | C++17 编译器 | [msys2.org](https://www.msys2.org/) → `pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja` |
+| vcpkg | C++ 包管理 | `git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg && C:\vcpkg\bootstrap-vcpkg.bat` |
+| Python 3 | 工具脚本 | [python.org](https://www.python.org/downloads/) 安装并添加到 PATH |
+
+**一键构建**
+
+```powershell
+git clone https://github.com/maziyee/paper---mcp---server.git
+cd paper---mcp---server
+setup_windows.bat
+```
+
+构建产物 `build\server.exe`（约 6.5 MB）**静态链接，零 DLL 依赖**，可直接拷贝运行。
+
+**手动构建**
+
+```powershell
+C:\vcpkg\vcpkg install spdlog nlohmann-json cpp-httplib --triplet x64-mingw-static
+mkdir build && cd build
+cmake .. -G Ninja ^
+  -DCMAKE_BUILD_TYPE=Release ^
+  -DCMAKE_TOOLCHAIN_FILE="C:\vcpkg\scripts\buildsystems\vcpkg.cmake" ^
+  -DVCPKG_TARGET_TRIPLET=x64-mingw-static ^
+  -DCMAKE_EXE_LINKER_FLAGS="-static-libstdc++ -static-libgcc -static"
+cmake --build .
+```
+
+#### Linux / WSL
+
+```bash
+git clone https://github.com/maziyee/paper---mcp---server.git
+cd paper---mcp---server
+bash setup_linux.sh
+./build/test_mcp
+./build/server --no-http
+```
+
+---
+
+## 配置说明
+
+### 视觉 API
+
+编辑 `config/server_config.json`：
+
+```json
+{
+  "vision": {
+    "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "model": "qwen3.7-plus",
+    "api_key": "sk-your-api-key-here"
+  }
+}
+```
+
+| 字段 | 说明 |
 |------|------|
-| CMake >= 3.10 | 构建系统 |
-| C++17 编译器 (GCC/MSVC) | 编译 |
-| vcpkg | C++ 包管理 |
-| Python 3 | 工具脚本 |
-| spdlog, nlohmann-json, httplib | 通过 vcpkg 安装 |
+| `base_url` | OpenAI 兼容 API 地址（DashScope / vLLM / Ollama 等） |
+| `model` | 模型名（如 `qwen3.7-plus`、`gpt-4o`、`llava:13b`） |
+| `api_key` | API Key（本地模型如 Ollama 可填 `not-needed`） |
 
-## 配置 Claude Code（VSCode 扩展 / WSL）
+> **注意**：API Key 仅从配置文件读取，不受环境变量覆盖。这是为了避免 MCP launcher 缓存残留旧 Key 导致 401 错误。
 
-在项目根目录创建 `.mcp.json`：
+### 接入 Claude Code（Windows）
+
+#### 方式一：项目级 `.mcp.json`（推荐）
+
+在 VSCode 工作区根目录创建 `.mcp.json`：
+
+```json
+{
+  "mcpServers": {
+    "paper-mcp": {
+      "type": "stdio",
+      "command": "./utils/mcp_mt/build/server.exe",
+      "args": ["--no-http"],
+      "cwd": "./utils/mcp_mt"
+    }
+  }
+}
+```
+
+> `cwd` 必须指向项目根目录 `mcp_mt/`，`server.exe` 会自动从 exe 位置推算 `vision_client.py` 路径。
+
+#### 方式二：Claude Desktop
+
+编辑 `%APPDATA%\Claude\claude_desktop_config.json`：
+
+```json
+{
+  "mcpServers": {
+    "paper-mcp": {
+      "command": "J:\\path\\to\\mcp_mt\\build\\server.exe",
+      "args": ["--no-http"],
+      "cwd": "J:\\path\\to\\mcp_mt"
+    }
+  }
+}
+```
+
+---
+
+## 脚本路径自动寻路
+
+`server.exe` 启动时自动查找 `vision_client.py`，依次尝试：
+
+1. **源码布局**：`exe/../tools/scripts/vision_client.py`（`build/` → `tools/scripts/`）
+2. **发布布局**：`exe/tools/vision_client.py`（同目录 `tools/`）
+3. **回退**：`exe/vision_client.py`
+
+无需手动配置脚本路径，两种布局开箱即用。
+
+---
+
+## 接入 Claude（WSL / Linux）
+
+### Claude Code VSCode 扩展（WSL）
+
+WSL 下 VSCode 扩展的 PATH 不包含 nvm 安装的 Node.js，需用 `mcp-node` + `mcp_bridge.js` 桥接：
 
 ```json
 {
@@ -164,25 +222,14 @@ Windows 下 VSCode 的 PATH 环境是完整的，可直接使用 Node.js：
       "cwd": "/home/you_dian/MCP/mcp_mt",
       "env": {
         "VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        "VISION_MODEL": "qwen3.7-plus",
-        "VISION_API_KEY": "<your-api-key>"
+        "VISION_MODEL": "qwen3.7-plus"
       }
     }
   }
 }
 ```
 
-> **WSL 用户注意**：VSCode 扩展宿主机的 PATH 不包含 nvm 安装的 Node.js，会导致 `spawn ENOENT`。需要用 VSCode 自带的 Node.js 启动。`mcp-node` 脚本会自动发现 VSCode 的 Node.js 路径。
-
-### 所需文件
-
-| 文件 | 作用 |
-|------|------|
-| `.mcp.json` | MCP 服务器配置（放项目根目录） |
-| `mcp_bridge.js` | Node.js 中继，启动 C++ server 并桥接管道 |
-| `mcp-node` | 自动发现 VSCode Node.js 的 wrapper 脚本 |
-
-### Bridge 架构（WSL 专用）
+**Bridge 架构（WSL 专用）**
 
 ```
 Claude Code (VSCode 扩展)
@@ -194,13 +241,22 @@ mcp_bridge.js (Node.js 中继)
 paper-mcp C++ Server (stdio 模式)
     │
     ▼
-Python 脚本 ────────────► 论文数据处理
-视觉大模型 API (DashScope) ► 图片/视频分析
+Python 脚本 / 视觉大模型 API
 ```
 
-VSCode 扩展的 MCP Gateway 在 WSL 下 spawn 进程时 PATH 不完整，直接用 C++ 二进制或系统 Python 都会报 `ENOENT`。通过 `mcp-node`（指向 VSCode 自带的 Node.js）可以绕过此限制。
+---
 
-### 传输协议兼容
+## 故障排查
+
+| 症状 | 原因 | 解决 |
+|------|------|------|
+| `Process exited with code 3221225781` | 缺少 DLL（`0xC0000135`） | 用 `x64-mingw-static` triplet 重新构建 |
+| 视觉工具返回 `401 Incorrect API key` | API Key 未配置或错误 | 检查 `config/server_config.json` 中 `vision.api_key` |
+| 视觉工具返回 `Connection refused` | 视觉 API 不可达 | 检查 `base_url`，确认服务已启动 |
+| `python: can't open file` | 脚本路径推导失败 | 确认 `cwd` 设置正确，或检查 `FindScript()` 日志 |
+| 工具调用后无反应 | Python 脚本执行异常 | 查看 `logs/rpc_*.log` 日志 |
+
+## 传输协议兼容
 
 C++ 服务器支持两种 MCP 传输格式：
 
@@ -214,10 +270,7 @@ C++ 服务器支持两种 MCP 传输格式：
 ## 用 Ollama 本地模型测试
 
 ```bash
-# 1. 启动 Ollama
 ollama serve
-
-# 2. 运行 demo（使用 qwen2.5:7b）
 python3 scripts/ollama_mcp_demo.py
 ```
 
@@ -235,25 +288,53 @@ python3 scripts/ollama_mcp_demo.py
 
 ```
 mcp_mt/
-├── include/           # 头文件
-│   ├── mcp_types.h    # 类型定义（ContentItem, ToolResult, ToolInputSchema）
-│   ├── mcp_server.h   # MCP 协议层
-│   ├── rpc_manager.h  # RPC 路由
-│   ├── my_rpc.h       # RPC 基类
-│   ├── http_rpc.h     # HTTP 传输
-│   └── std_handle_rpc.h # stdio 传输
+├── include/                   # 头文件
+│   ├── mcp_types.h            # 类型定义
+│   ├── mcp_server.h           # MCP 协议层
+│   ├── rpc_manager.h          # RPC 路由
+│   ├── my_rpc.h / http_rpc.h / std_handle_rpc.h
+│   └── mcp_httplib_wrapper.h  # MinGW 兼容 wrapper
 ├── mpc_src/
-│   ├── common/        # 公共实现
-│   └── server/        # 服务端入口
+│   ├── common/                # 公共实现
+│   └── server/                # 服务端入口
 ├── tools/
-│   ├── paper_tools.cpp   # 论文工具注册
-│   ├── vision_tools.cpp  # 视觉工具注册（图片分析/OCR/视频）
-│   ├── vision_tools.h    # 视觉工具头文件
-│   └── scripts/          # Python 脚本
-├── test_tools/        # 测试
-├── config/            # 配置文件
-└── papers/            # 论文数据
+│   ├── paper_tools.cpp        # 论文工具注册
+│   ├── vision_tools.cpp       # 视觉工具注册（含 FindScript 自动寻路）
+│   ├── vision_tools.h
+│   └── scripts/               # Python 脚本
+│       ├── vision_client.py   # 视觉 API 客户端（DashScope/Ollama 兼容）
+│       ├── extract_data_points.py
+│       ├── search_latest_data.py
+│       ├── update_paper_data.py
+│       └── cnki_search.py     # 知网搜索
+├── test_tools/                # 测试
+├── config/                    # 配置文件
+├── logs/                      # 运行日志
+├── papers/                    # 论文数据
+├── release/                   # 发布包
+│   └── paper-mcp-server/      # 可分发的独立包
+│       ├── server.exe
+│       ├── config/
+│       ├── tools/
+│       ├── papers/
+│       └── logs/
+├── scripts/                   # 辅助脚本（bridge 等）
+├── setup_linux.sh             # Linux 一键构建
+└── setup_windows.bat          # Windows 一键构建
 ```
+
+## Windows 适配说明
+
+| 适配项 | 说明 |
+|------|------|
+| `Quote()` — `""` 转义 | Windows `cmd.exe` 用 `""` 而非 `\"` 转义引号 |
+| `--file` 临时文件传参 | 避免命令行 GBK 编码导致 JSON 解析失败 |
+| `ensure_ascii=True` | Python 输出纯 ASCII，消除 GBK/UTF-8 编码冲突 |
+| `2>&1` stderr 重定向 | 捕获 Python 错误信息到 MCP 响应 |
+| `FindScript()` 自动寻路 | 运行时从 exe 位置推算脚本路径，支持源码/发布两种布局 |
+| `_WIN32_WINNT=0x0A00` | 指定 Win10+ SDK 级别，cpp-httplib 需要 |
+| `mcp_httplib_wrapper.h` | 绕过 MinGW 头文件缺少 `GetAddrInfoExCancel` |
+| vcpkg triplet `x64-mingw-static` | 静态链接，产物零依赖 |
 
 ## 命令行参数
 
@@ -266,6 +347,16 @@ mcp_mt/
   --no-http           禁用 HTTP 传输
   --no-stdio          禁用 stdio 传输
 ```
+
+## 前置依赖
+
+| 依赖 | 用途 | Windows 获取方式 |
+|------|------|------------------|
+| CMake >= 3.10 | 构建系统 | MSYS2: `pacman -S mingw-w64-x86_64-cmake` |
+| C++17 编译器 (GCC) | 编译 | MSYS2: `pacman -S mingw-w64-x86_64-gcc` |
+| Ninja | 构建生成器 | MSYS2: `pacman -S mingw-w64-x86_64-ninja` |
+| vcpkg | C++ 包管理 | `git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg` |
+| Python 3 | 工具脚本 | [python.org](https://www.python.org/downloads/) |
 
 ## License
 

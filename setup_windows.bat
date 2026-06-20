@@ -66,7 +66,7 @@ echo   VCPKG_ROOT=%VCPKG_ROOT%
 echo.
 echo [3/4] Installing C++ dependencies...
 
-"%VCPKG_ROOT%\vcpkg" install spdlog nlohmann-json httplib
+"%VCPKG_ROOT%\vcpkg" install spdlog nlohmann-json cpp-httplib --triplet x64-mingw-static
 
 :: ============================================
 :: Step 4: Build
@@ -78,7 +78,7 @@ if exist build rmdir /s /q build
 mkdir build
 cd build
 
-cmake .. -DCMAKE_TOOLCHAIN_FILE="%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake"
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-mingw-static -DCMAKE_EXE_LINKER_FLAGS="-static-libstdc++ -static-libgcc -static"
 if %errorlevel% neq 0 (
     echo   ERROR: CMake configure failed
     exit /b 1
