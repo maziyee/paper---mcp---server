@@ -27,6 +27,7 @@ file(GLOB_RECURSE COMMON_SOURCES
 set (SERVER_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/mpc_src/server/server_main.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/tools/paper_tools.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/vision_tools.cpp"
 )
 
 set (TEST_SOURCES

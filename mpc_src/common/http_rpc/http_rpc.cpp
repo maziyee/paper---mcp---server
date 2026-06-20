@@ -1,7 +1,10 @@
 #include "http_rpc.h"
 
+#include <algorithm>
 #include <fstream>
+#include <mutex>
 #include <sstream>
+#include <thread>
 
 #include "httplib.h"
 #include "log_manager.h"
@@ -20,13 +23,11 @@ namespace mcp {
 class HttpRpcServer::Impl {
  public:
   explicit Impl(RpcManager& rpc_manager) : rpc_manager_(rpc_manager) {
-    // httplib 内部错误回调（如连接被重置等）
     server_.set_logger(
         [](const httplib::Request& req, const httplib::Response& res) {
           MCP_LOG_INFO("HTTP {} {} -> {}", req.method, req.path, res.status);
         });
 
-    // 自定义错误响应：HTTP 错误也返回 JSON 格式
     server_.set_error_handler(
         [](const httplib::Request& req, httplib::Response& res) {
           RpcError err;
@@ -47,8 +48,71 @@ class HttpRpcServer::Impl {
         });
   }
 
+  // SSE 客户端管理
+  struct SseClient {
+    std::shared_ptr<SseSender> sender;
+    std::shared_ptr<std::atomic<bool>> connected;
+  };
+
+  void RegisterSseSender(std::shared_ptr<SseSender> sender,
+                         std::shared_ptr<std::atomic<bool>> connected) {
+    std::function<void()> callback;
+    {
+      std::lock_guard<std::mutex> lock(sse_mutex_);
+      bool was_empty = sse_clients_.empty();
+      sse_clients_.push_back({std::move(sender), std::move(connected)});
+      MCP_LOG_INFO("SSE client connected, total={}", sse_clients_.size());
+      if (was_empty && on_first_client_) {
+        callback = on_first_client_;  // 拷贝回调，在锁外执行
+      }
+    }
+    // 锁外执行回调，避免 BroadcastEvent 死锁
+    if (callback) {
+      callback();
+    }
+  }
+
+  std::function<void()> on_first_client_;
+
+  void BroadcastEvent(const std::string& event_type,
+                      const std::string& data) {
+    std::lock_guard<std::mutex> lock(sse_mutex_);
+    // 清理断开的客户端
+    sse_clients_.erase(
+        std::remove_if(sse_clients_.begin(), sse_clients_.end(),
+                       [](const SseClient& c) {
+                         return !c.connected || !c.connected->load();
+                       }),
+        sse_clients_.end());
+
+    if (sse_clients_.empty()) return;
+
+    std::string frame = "event: " + event_type + "\n";
+    size_t start = 0;
+    while (start < data.size()) {
+      size_t end = data.find('\n', start);
+      if (end == std::string::npos) end = data.size();
+      frame += "data: ";
+      frame.append(data, start, end - start);
+      frame += "\n";
+      start = end + 1;
+    }
+    frame += "\n";
+
+    MCP_LOG_INFO("SSE broadcast: event={} to {} clients", event_type,
+                 sse_clients_.size());
+
+    for (auto& c : sse_clients_) {
+      if (!(*c.sender)(frame)) {
+        c.connected->store(false);
+      }
+    }
+  }
+
   httplib::Server server_;
   RpcManager& rpc_manager_;
+  std::mutex sse_mutex_;
+  std::vector<SseClient> sse_clients_;
 };
 
 // ======== 配置文件构造 ========
@@ -172,18 +236,10 @@ bool HttpRpcServer::Start() {
     res.set_content(status.dump(), "application/json");
   });
 
-  // ======== Streamable HTTP：POST /rpc ========
-  //
-  // 同一个端点，根据 Accept 头选择响应模式：
-  //   Accept: application/json   → 普通 JSON 响应（短连接）
-  //   Accept: text/event-stream  → SSE 流式响应（长连接，每个结果一个事件）
-  //   未指定 Accept              → 默认为 application/json
-  //
-  pimpl_->server_.Post(
-      "/rpc",
-      [this, handle_one, generate_session_id](const httplib::Request& req,
-                                              httplib::Response& res) {
-        // Content-Type 校验
+  // ======== 批处理请求体 ========
+  auto handle_request_body =
+      [handle_one, generate_session_id](const httplib::Request& req,
+                                        httplib::Response& res) {
         if (!req.has_header("Content-Type") ||
             req.get_header_value("Content-Type").find("application/json") ==
                 std::string::npos) {
@@ -195,7 +251,6 @@ bool HttpRpcServer::Start() {
           return;
         }
 
-        // 判断客户端期望的响应模式
         bool wants_stream =
             req.has_header("Accept") &&
             req.get_header_value("Accept").find("text/event-stream") !=
@@ -204,12 +259,10 @@ bool HttpRpcServer::Start() {
         try {
           auto json = nlohmann::json::parse(req.body);
 
-          // 统一为数组处理
           bool is_batch = json.is_array();
           nlohmann::json requests =
               is_batch ? json : nlohmann::json::array({json});
 
-          // ======== 流式模式（SSE）========
           if (wants_stream) {
             std::string session_id = generate_session_id();
             res.set_header("Content-Type", "text/event-stream");
@@ -243,7 +296,6 @@ bool HttpRpcServer::Start() {
             return;
           }
 
-          // ======== 普通模式（JSON 一次性返回）========
           if (is_batch) {
             nlohmann::json batch_result = nlohmann::json::array();
             for (const auto& item : requests) {
@@ -261,7 +313,6 @@ bool HttpRpcServer::Start() {
             return;
           }
 
-          // 单请求
           auto result = handle_one(requests[0]);
           if (result.contains("error")) {
             res.status =
@@ -277,7 +328,111 @@ bool HttpRpcServer::Start() {
           res.status = 400;
           res.set_content(err.ToJson().dump(), "application/json");
         }
-      });
+      };
+
+  // ======== Streamable HTTP ========
+  //
+  // POST /rpc  — 自定义 RPC 端点（向后兼容）
+  // POST /mcp  — MCP Streamable HTTP 标准端点
+  //
+  // 根据 Accept 头选择响应模式：
+  //   Accept: application/json   → 普通 JSON 响应
+  //   Accept: text/event-stream  → SSE 流式响应 + Mcp-Session-Id
+  //
+  pimpl_->server_.Post("/rpc", handle_request_body);
+  pimpl_->server_.Post("/mcp", handle_request_body);
+
+  // ======== OAuth 端点 ========
+  //
+  // 返回 404 + OAuth 标准格式错误，告知客户端本服务器不需要 OAuth。
+  // Claude Code 会先探测这些端点，收到正确的 OAuth 错误格式后
+  // 走无认证流程继续连接。
+  //
+  auto oauth_not_found = [](const httplib::Request& req,
+                            httplib::Response& res) {
+    res.status = 404;
+    res.set_content(
+        "{\"error\":\"invalid_request\",\"error_description\":\"OAuth not "
+        "supported on this server\"}",
+        "application/json");
+  };
+  pimpl_->server_.Get("/register", oauth_not_found);
+  pimpl_->server_.Post("/register", oauth_not_found);
+  pimpl_->server_.Get("/token", oauth_not_found);
+  pimpl_->server_.Post("/token", oauth_not_found);
+  pimpl_->server_.Get("/authorize", oauth_not_found);
+  pimpl_->server_.Get("/.well-known/oauth-authorization-server",
+                      oauth_not_found);
+
+  // ======== SSE 事件推送：GET /mcp 和 GET /mcp/sse ========
+  //
+  // 标准 MCP SSE 端点 — 服务器主动推送通知事件
+  // 客户端订阅后，服务器通过此通道推送 tools/list_changed 等通知
+  //
+  // GET /mcp     — MCP Streamable HTTP 规范入口
+  // GET /mcp/sse — 遗留兼容端点
+  //
+  auto sse_handler = [this, generate_session_id](
+                          const httplib::Request& req,
+                          httplib::Response& res) {
+    std::string session_id = generate_session_id();
+    res.set_header("Content-Type", "text/event-stream");
+    res.set_header("Cache-Control", "no-cache");
+    res.set_header("Connection", "keep-alive");
+    res.set_header("Access-Control-Allow-Origin", "*");
+    res.set_header("Mcp-Session-Id", session_id);
+
+    auto pending = std::make_shared<std::vector<std::string>>();
+    auto pending_mutex = std::make_shared<std::mutex>();
+    auto connected = std::make_shared<std::atomic<bool>>(true);
+
+    auto sender = std::make_shared<SseSender>(
+        [pending, pending_mutex](const std::string& event_frame) -> bool {
+          std::lock_guard<std::mutex> lock(*pending_mutex);
+          pending->push_back(event_frame);
+          return true;
+        });
+
+    pimpl_->RegisterSseSender(sender, connected);
+
+    res.set_chunked_content_provider(
+        "text/event-stream",
+        [this, sender, pending, pending_mutex, session_id, connected](
+            size_t offset, httplib::DataSink& sink) -> bool {
+          if (!sink.write("event: endpoint\ndata: /mcp\n\n", 33))
+            return false;
+
+          int idle_ticks = 0;
+          while (sink.is_writable()) {
+            {
+              std::lock_guard<std::mutex> lock(*pending_mutex);
+              for (const auto& msg : *pending) {
+                if (!sink.write(msg.data(), msg.size())) {
+                  connected->store(false);
+                  return false;
+                }
+              }
+              pending->clear();
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            idle_ticks++;
+            if (idle_ticks >= 30) {
+              if (!sink.write(": heartbeat\n\n", 14)) {
+                connected->store(false);
+                return false;
+              }
+              idle_ticks = 0;
+            }
+          }
+          connected->store(false);
+          sink.done();
+          return true;
+        });
+  };
+
+  pimpl_->server_.Get("/mcp", sse_handler);
+  pimpl_->server_.Get("/mcp/sse", sse_handler);
 
   MCP_LOG_INFO("HttpRpcServer starting on {}:{}", host_, port_);
 
@@ -360,6 +515,17 @@ bool HttpRpcServer::RegisterSseEndpoint(const std::string& path,
   });
 
   return true;
+}
+
+// ======== SSE 广播 ========
+
+void HttpRpcServer::BroadcastEvent(const std::string& event_type,
+                                   const std::string& data) {
+  pimpl_->BroadcastEvent(event_type, data);
+}
+
+void HttpRpcServer::SetOnFirstSseClient(std::function<void()> callback) {
+  pimpl_->on_first_client_ = std::move(callback);
 }
 
 }  // namespace mcp

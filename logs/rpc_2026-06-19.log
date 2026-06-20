@@ -1,0 +1,171 @@
+[2026-06-19 00:14:06.427] [info] [82054] Server paper-mcp v1.0.0 starting (http=false, stdio=true)
+[2026-06-19 00:14:06.428] [info] [82054] McpServer created: paper-mcp v1.0.0
+[2026-06-19 00:14:06.428] [info] [82054] Tool registered: extract_data_points (1 props)
+[2026-06-19 00:14:06.428] [info] [82054] [Tool] extract_data_points registered
+[2026-06-19 00:14:06.428] [info] [82054] Tool registered: search_latest_data (4 props)
+[2026-06-19 00:14:06.428] [info] [82054] [Tool] search_latest_data registered
+[2026-06-19 00:14:06.428] [info] [82054] Tool registered: update_paper_data (2 props)
+[2026-06-19 00:14:06.428] [info] [82054] [Tool] update_paper_data registered
+[2026-06-19 00:14:06.428] [info] [82054] Installing MCP methods (tools=3, resources=0, prompts=0)...
+[2026-06-19 00:14:06.428] [info] [82054] MCP methods installed successfully
+[2026-06-19 00:14:06.428] [info] [82054] Stdio transport started (stdio)
+[2026-06-19 00:14:06.478] [info] [82082] Server paper-mcp v1.0.0 starting (http=false, stdio=true)
+[2026-06-19 00:14:06.478] [info] [82082] McpServer created: paper-mcp v1.0.0
+[2026-06-19 00:14:06.478] [info] [82082] Tool registered: extract_data_points (1 props)
+[2026-06-19 00:14:06.478] [info] [82082] [Tool] extract_data_points registered
+[2026-06-19 00:14:06.478] [info] [82082] Tool registered: search_latest_data (4 props)
+[2026-06-19 00:14:06.478] [info] [82082] [Tool] search_latest_data registered
+[2026-06-19 00:14:06.478] [info] [82082] Tool registered: update_paper_data (2 props)
+[2026-06-19 00:14:06.478] [info] [82082] [Tool] update_paper_data registered
+[2026-06-19 00:14:06.478] [info] [82082] Installing MCP methods (tools=3, resources=0, prompts=0)...
+[2026-06-19 00:14:06.478] [info] [82082] MCP methods installed successfully
+[2026-06-19 00:14:06.478] [info] [82082] Stdio transport started (stdio)
+[2026-06-19 00:14:06.637] [info] [82082] ReadMessage: raw JSON mode, len=305
+[2026-06-19 00:14:06.644] [info] [82054] ReadMessage: raw JSON mode, len=305
+[2026-06-19 00:14:06.693] [info] [82054] ReadMessage: raw JSON mode, len=54
+[2026-06-19 00:14:06.693] [info] [82054] Client initialized
+[2026-06-19 00:14:06.693] [info] [82054] ReadMessage: raw JSON mode, len=46
+[2026-06-19 00:14:06.741] [info] [82082] ReadMessage: raw JSON mode, len=54
+[2026-06-19 00:14:06.741] [info] [82082] Client initialized
+[2026-06-19 00:14:06.741] [info] [82082] ReadMessage: raw JSON mode, len=46
+[2026-06-19 00:14:06.953] [info] [82054] ReadMessage: EOF on first read
+[2026-06-19 00:14:06.953] [info] [82054] Stdio transport stopped
+[2026-06-19 00:14:06.953] [info] [82054] Server exited
+[2026-06-19 00:14:20.429] [info] [82082] ReadMessage: EOF on first read
+[2026-06-19 00:14:20.429] [info] [82082] Stdio transport stopped
+[2026-06-19 00:14:20.429] [info] [82082] Server exited
+[2026-06-19 17:14:53.578] [info] [1707] Server paper-mcp v1.0.0 starting (http=false, stdio=true)
+[2026-06-19 17:14:53.579] [info] [1707] McpServer created: paper-mcp v1.0.0
+[2026-06-19 17:14:53.579] [info] [1707] Tool registered: extract_data_points (1 props)
+[2026-06-19 17:14:53.579] [info] [1707] [Tool] extract_data_points registered
+[2026-06-19 17:14:53.579] [info] [1707] Tool registered: search_latest_data (4 props)
+[2026-06-19 17:14:53.579] [info] [1707] [Tool] search_latest_data registered
+[2026-06-19 17:14:53.579] [info] [1707] Tool registered: update_paper_data (2 props)
+[2026-06-19 17:14:53.579] [info] [1707] [Tool] update_paper_data registered
+[2026-06-19 17:14:53.579] [info] [1707] Installing MCP methods (tools=3, resources=0, prompts=0)...
+[2026-06-19 17:14:53.579] [info] [1707] MCP methods installed successfully
+[2026-06-19 17:14:53.579] [info] [1707] Stdio transport started (stdio)
+[2026-06-19 17:14:53.604] [info] [1706] Server paper-mcp v1.0.0 starting (http=false, stdio=true)
+[2026-06-19 17:14:53.605] [info] [1706] McpServer created: paper-mcp v1.0.0
+[2026-06-19 17:14:53.605] [info] [1706] Tool registered: extract_data_points (1 props)
+[2026-06-19 17:14:53.605] [info] [1706] [Tool] extract_data_points registered
+[2026-06-19 17:14:53.605] [info] [1706] Tool registered: search_latest_data (4 props)
+[2026-06-19 17:14:53.605] [info] [1706] [Tool] search_latest_data registered
+[2026-06-19 17:14:53.605] [info] [1706] Tool registered: update_paper_data (2 props)
+[2026-06-19 17:14:53.605] [info] [1706] [Tool] update_paper_data registered
+[2026-06-19 17:14:53.605] [info] [1706] Installing MCP methods (tools=3, resources=0, prompts=0)...
+[2026-06-19 17:14:53.605] [info] [1706] MCP methods installed successfully
+[2026-06-19 17:14:53.605] [info] [1706] Stdio transport started (stdio)
+[2026-06-19 17:14:53.854] [info] [1707] ReadMessage: raw JSON mode, len=305
+[2026-06-19 17:14:53.872] [info] [1706] ReadMessage: raw JSON mode, len=305
+[2026-06-19 17:14:53.984] [info] [1706] ReadMessage: raw JSON mode, len=54
+[2026-06-19 17:14:53.985] [info] [1706] Client initialized
+[2026-06-19 17:14:53.985] [info] [1706] ReadMessage: raw JSON mode, len=46
+[2026-06-19 17:14:54.159] [info] [1707] ReadMessage: raw JSON mode, len=54
+[2026-06-19 17:14:54.159] [info] [1707] Client initialized
+[2026-06-19 17:14:54.159] [info] [1707] ReadMessage: raw JSON mode, len=46
+[2026-06-19 17:14:56.186] [info] [1706] ReadMessage: EOF on first read
+[2026-06-19 17:14:56.186] [info] [1706] Stdio transport stopped
+[2026-06-19 17:14:56.186] [info] [1706] Server exited
+[2026-06-19 17:18:42.889] [info] [1707] ReadMessage: EOF on first read
+[2026-06-19 17:18:42.891] [info] [1707] Stdio transport stopped
+[2026-06-19 17:18:42.891] [info] [1707] Server exited
+[2026-06-19 17:18:46.347] [info] [2866] Server paper-mcp v1.0.0 starting (http=false, stdio=true)
+[2026-06-19 17:18:46.347] [info] [2866] McpServer created: paper-mcp v1.0.0
+[2026-06-19 17:18:46.348] [info] [2866] Tool registered: extract_data_points (1 props)
+[2026-06-19 17:18:46.348] [info] [2866] [Tool] extract_data_points registered
+[2026-06-19 17:18:46.348] [info] [2866] Tool registered: search_latest_data (4 props)
+[2026-06-19 17:18:46.348] [info] [2866] [Tool] search_latest_data registered
+[2026-06-19 17:18:46.348] [info] [2866] Tool registered: update_paper_data (2 props)
+[2026-06-19 17:18:46.348] [info] [2866] [Tool] update_paper_data registered
+[2026-06-19 17:18:46.348] [info] [2866] Installing MCP methods (tools=3, resources=0, prompts=0)...
+[2026-06-19 17:18:46.348] [info] [2866] MCP methods installed successfully
+[2026-06-19 17:18:46.349] [info] [2866] Stdio transport started (stdio)
+[2026-06-19 17:18:46.513] [info] [2866] ReadMessage: raw JSON mode, len=305
+[2026-06-19 17:18:46.552] [info] [2866] ReadMessage: raw JSON mode, len=54
+[2026-06-19 17:18:46.552] [info] [2866] Client initialized
+[2026-06-19 17:18:46.552] [info] [2866] ReadMessage: raw JSON mode, len=46
+[2026-06-19 17:19:15.013] [info] [3208] Server paper-mcp v1.0.0 starting (http=false, stdio=true)
+[2026-06-19 17:19:15.013] [info] [3208] McpServer created: paper-mcp v1.0.0
+[2026-06-19 17:19:15.013] [info] [3208] Tool registered: extract_data_points (1 props)
+[2026-06-19 17:19:15.013] [info] [3208] [Tool] extract_data_points registered
+[2026-06-19 17:19:15.013] [info] [3208] Tool registered: search_latest_data (4 props)
+[2026-06-19 17:19:15.013] [info] [3208] [Tool] search_latest_data registered
+[2026-06-19 17:19:15.013] [info] [3208] Tool registered: update_paper_data (2 props)
+[2026-06-19 17:19:15.013] [info] [3208] [Tool] update_paper_data registered
+[2026-06-19 17:19:15.013] [info] [3208] Installing MCP methods (tools=3, resources=0, prompts=0)...
+[2026-06-19 17:19:15.013] [info] [3208] MCP methods installed successfully
+[2026-06-19 17:19:15.013] [info] [3208] Stdio transport started (stdio)
+[2026-06-19 17:19:15.167] [info] [3208] ReadMessage: raw JSON mode, len=305
+[2026-06-19 17:19:15.210] [info] [3208] ReadMessage: raw JSON mode, len=54
+[2026-06-19 17:19:15.211] [info] [3208] Client initialized
+[2026-06-19 17:19:15.211] [info] [3208] ReadMessage: raw JSON mode, len=46
+[2026-06-19 17:19:34.208] [info] [3370] Server paper-mcp v1.0.0 starting (http=true, stdio=true)
+[2026-06-19 17:19:34.208] [info] [3370] McpServer created: paper-mcp v1.0.0
+[2026-06-19 17:19:34.208] [info] [3370] Tool registered: extract_data_points (1 props)
+[2026-06-19 17:19:34.208] [info] [3370] [Tool] extract_data_points registered
+[2026-06-19 17:19:34.209] [info] [3370] Tool registered: search_latest_data (4 props)
+[2026-06-19 17:19:34.209] [info] [3370] [Tool] search_latest_data registered
+[2026-06-19 17:19:34.209] [info] [3370] Tool registered: update_paper_data (2 props)
+[2026-06-19 17:19:34.209] [info] [3370] [Tool] update_paper_data registered
+[2026-06-19 17:19:34.209] [info] [3370] Installing MCP methods (tools=3, resources=0, prompts=0)...
+[2026-06-19 17:19:34.209] [info] [3370] MCP methods installed successfully
+[2026-06-19 17:19:34.209] [info] [3370] Stdio transport started (stdio)
+[2026-06-19 17:19:34.209] [info] [3370] ReadMessage: EOF on first read
+[2026-06-19 17:19:34.209] [info] [3370] Stdio transport stopped
+[2026-06-19 17:19:34.212] [info] [3371] HttpRpcServer starting on 0.0.0.0:9090
+[2026-06-19 17:19:38.274] [info] [3372] HTTP GET /health -> 200
+[2026-06-19 17:19:46.057] [info] [3373] HTTP POST /mcp -> 200
+[2026-06-19 17:19:46.064] [info] [3373] Client initialized
+[2026-06-19 17:19:46.064] [info] [3373] HTTP POST /mcp -> 200
+[2026-06-19 17:19:46.069] [info] [3374] HTTP POST /mcp -> 200
+[2026-06-19 17:20:07.711] [info] [3208] ReadMessage: EOF on first read
+[2026-06-19 17:20:07.711] [info] [3208] Stdio transport stopped
+[2026-06-19 17:20:07.711] [info] [3208] Server exited
+[2026-06-19 17:20:07.714] [info] [2866] ReadMessage: EOF on first read
+[2026-06-19 17:20:07.715] [info] [2866] Stdio transport stopped
+[2026-06-19 17:20:07.715] [info] [2866] Server exited
+[2026-06-19 17:40:08.609] [info] [5971] Server paper-mcp v1.0.0 starting (http=false, stdio=true)
+[2026-06-19 17:40:08.609] [info] [5969] Server paper-mcp v1.0.0 starting (http=false, stdio=true)
+[2026-06-19 17:40:08.610] [info] [5969] McpServer created: paper-mcp v1.0.0
+[2026-06-19 17:40:08.610] [info] [5971] McpServer created: paper-mcp v1.0.0
+[2026-06-19 17:40:08.610] [info] [5971] Tool registered: extract_data_points (1 props)
+[2026-06-19 17:40:08.610] [info] [5969] Tool registered: extract_data_points (1 props)
+[2026-06-19 17:40:08.610] [info] [5969] [Tool] extract_data_points registered
+[2026-06-19 17:40:08.610] [info] [5971] [Tool] extract_data_points registered
+[2026-06-19 17:40:08.610] [info] [5969] Tool registered: search_latest_data (4 props)
+[2026-06-19 17:40:08.610] [info] [5971] Tool registered: search_latest_data (4 props)
+[2026-06-19 17:40:08.610] [info] [5971] [Tool] search_latest_data registered
+[2026-06-19 17:40:08.610] [info] [5969] [Tool] search_latest_data registered
+[2026-06-19 17:40:08.610] [info] [5971] Tool registered: update_paper_data (2 props)
+[2026-06-19 17:40:08.610] [info] [5969] Tool registered: update_paper_data (2 props)
+[2026-06-19 17:40:08.610] [info] [5969] [Tool] update_paper_data registered
+[2026-06-19 17:40:08.610] [info] [5971] [Tool] update_paper_data registered
+[2026-06-19 17:40:08.610] [info] [5971] Installing MCP methods (tools=3, resources=0, prompts=0)...
+[2026-06-19 17:40:08.610] [info] [5969] Installing MCP methods (tools=3, resources=0, prompts=0)...
+[2026-06-19 17:40:08.610] [info] [5969] MCP methods installed successfully
+[2026-06-19 17:40:08.610] [info] [5971] MCP methods installed successfully
+[2026-06-19 17:40:08.610] [info] [5971] Stdio transport started (stdio)
+[2026-06-19 17:40:08.610] [info] [5969] Stdio transport started (stdio)
+[2026-06-19 17:40:08.809] [info] [5969] ReadMessage: raw JSON mode, len=305
+[2026-06-19 17:40:08.841] [info] [5971] ReadMessage: raw JSON mode, len=305
+[2026-06-19 17:40:08.852] [info] [3375] HTTP POST /mcp -> 200
+[2026-06-19 17:40:08.874] [info] [3375] Client initialized
+[2026-06-19 17:40:08.874] [info] [3375] HTTP POST /mcp -> 200
+[2026-06-19 17:40:08.886] [info] [3376] HTTP POST /mcp -> 200
+[2026-06-19 17:40:08.914] [info] [3376] Client initialized
+[2026-06-19 17:40:08.914] [info] [3376] HTTP POST /mcp -> 200
+[2026-06-19 17:40:08.920] [info] [5969] ReadMessage: raw JSON mode, len=54
+[2026-06-19 17:40:08.921] [info] [5969] Client initialized
+[2026-06-19 17:40:08.921] [info] [5969] ReadMessage: raw JSON mode, len=46
+[2026-06-19 17:40:08.935] [info] [3377] HTTP POST /mcp -> 200
+[2026-06-19 17:40:08.987] [info] [3375] HTTP POST /mcp -> 200
+[2026-06-19 17:40:09.004] [info] [5971] ReadMessage: raw JSON mode, len=54
+[2026-06-19 17:40:09.004] [info] [5971] Client initialized
+[2026-06-19 17:40:09.004] [info] [5971] ReadMessage: raw JSON mode, len=46
+[2026-06-19 17:40:09.528] [info] [5971] ReadMessage: EOF on first read
+[2026-06-19 17:40:09.528] [info] [5971] Stdio transport stopped
+[2026-06-19 17:40:09.528] [info] [5971] Server exited
+[2026-06-19 21:26:38.437] [info] [5969] ReadMessage: EOF on first read
+[2026-06-19 21:26:38.443] [info] [5969] Stdio transport stopped
+[2026-06-19 21:26:38.443] [info] [5969] Server exited

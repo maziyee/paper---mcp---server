@@ -36,6 +36,17 @@ std::string McpServer::ErrorResult(const std::string& msg) {
   return MakeErrorResult(msg).ToResultJson().dump();
 }
 
+// ======== 查询已注册的定义 ========
+
+nlohmann::json McpServer::GetToolDefs() const {
+  nlohmann::json tools = nlohmann::json::array();
+  std::shared_lock<std::shared_mutex> lock(tools_mutex_);
+  for (const auto& [name, def] : tool_defs_) {
+    tools.push_back(def.ToJson());
+  }
+  return tools;
+}
+
 // ======== 变更回调 ========
 
 void McpServer::SetChangeCallback(ChangeCallback cb) {
