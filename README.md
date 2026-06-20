@@ -1,6 +1,6 @@
 # Paper MCP Server
 
-基于 C++ 的 MCP（Model Context Protocol）论文数据处理服务端，提供论文数据提取、最新数据搜索、数据更新等功能。
+基于 C++ 的 MCP（Model Context Protocol）服务端，提供视觉分析（图片/视频）、论文数据提取、OCR、最新数据搜索等功能。
 
 ## 架构
 
@@ -22,10 +22,22 @@ Claude Desktop / MCP 客户端
 └─────────────────────────────┘
     │
     ▼
-  Python 脚本 → 论文处理
+  Python 脚本 ────────────► 论文数据处理
+  视觉大模型 API (DashScope) ► 图片/视频分析
 ```
 
 ## 已有工具
+
+### 视觉分析
+
+| 工具 | 功能 | 输入 |
+|------|------|------|
+| `analyze_image` | 使用视觉大模型分析图片内容（论文图表、实验图像等） | 本地路径 / URL |
+| `ocr_image` | 从图片中提取文字，支持 plain/markdown/json 格式 | 本地路径 / URL |
+| `compare_images` | 对比 2-4 张图片的差异和相似之处 | 多个路径 / URL |
+| `analyze_video` | 分析视频内容，返回关键帧提取方案 | 本地路径 / URL |
+
+### 论文数据处理
 
 | 工具 | 功能 |
 |------|------|
@@ -81,7 +93,12 @@ setup_windows.bat
       "type": "stdio",
       "command": "/home/you_dian/.local/bin/mcp-node",
       "args": ["/home/you_dian/MCP/mcp_mt/scripts/mcp_bridge.js"],
-      "cwd": "/home/you_dian/MCP/mcp_mt"
+      "cwd": "/home/you_dian/MCP/mcp_mt",
+      "env": {
+        "VISION_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "VISION_MODEL": "qwen3.7-plus",
+        "VISION_API_KEY": "<your-api-key>"
+      }
     }
   }
 }
@@ -109,7 +126,8 @@ mcp_bridge.js (Node.js 中继)
 paper-mcp C++ Server (stdio 模式)
     │
     ▼
-Python 脚本 → 论文处理
+Python 脚本 ────────────► 论文数据处理
+视觉大模型 API (DashScope) ► 图片/视频分析
 ```
 
 VSCode 扩展的 MCP Gateway 在 WSL 下 spawn 进程时 PATH 不完整，直接用 C++ 二进制或系统 Python 都会报 `ENOENT`。通过 `mcp-node`（指向 VSCode 自带的 Node.js）可以绕过此限制。
@@ -179,8 +197,10 @@ mcp_mt/
 │   ├── common/        # 公共实现
 │   └── server/        # 服务端入口
 ├── tools/
-│   ├── paper_tools.cpp # 工具注册
-│   └── scripts/       # Python 脚本
+│   ├── paper_tools.cpp   # 论文工具注册
+│   ├── vision_tools.cpp  # 视觉工具注册（图片分析/OCR/视频）
+│   ├── vision_tools.h    # 视觉工具头文件
+│   └── scripts/          # Python 脚本
 ├── test_tools/        # 测试
 ├── config/            # 配置文件
 └── papers/            # 论文数据
